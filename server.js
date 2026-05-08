@@ -92,7 +92,9 @@ io.on('connection', (socket) => {
     };
     socket.join(code);
     playerRoom = code;
-    rooms[code].players[socket.id] = createPlayer(name, skin);
+    const p = createPlayer(name, skin);
+    p.id = socket.id;
+    rooms[code].players[socket.id] = p;
     socket.emit('roomCreated', code);
     socket.emit('roomUpdate', rooms[code]);
   });
@@ -103,7 +105,9 @@ io.on('connection', (socket) => {
     if (Object.keys(room.players).length >= 6) return socket.emit('error', 'Комната полна (макс 6)');
     socket.join(code);
     playerRoom = code;
-    room.players[socket.id] = createPlayer(name, skin);
+    const p2 = createPlayer(name, skin);
+    p2.id = socket.id;
+    room.players[socket.id] = p2;
     io.to(code).emit('roomUpdate', room);
   });
 
