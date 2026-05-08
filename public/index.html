@@ -32,7 +32,7 @@ body{background:#0a0c16;color:#eee;font-family:system-ui,'Segoe UI',monospace;ov
 .pl{list-style:none;margin:6px 0;max-height:100px;overflow-y:auto}
 .pl li{padding:3px 7px;background:#0c0c1e;margin:2px 0;border-radius:3px;border-left:2px solid #3f4;font-size:11px;color:#bbb}
 .rd{width:100%;padding:10px;border:0;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#3f4,#0a0);color:#000;transition:.2s}
-.rd.r{background:linear-gradient(135deg,#ff4,#a80);color:#000}
+.rd.rdy{background:linear-gradient(135deg,#ff4,#a80);color:#000}
 .er{color:#f55;font-size:11px;margin-top:6px;display:none}
 
 #game{display:none;position:relative;width:100vw;height:100vh;overflow:hidden}
@@ -255,6 +255,7 @@ function err(m){const e=$('er');e.textContent=m;e.style.display=m?'block':'none'
 
 // SOCKET
 function connect(action,code){
+  rm=null;rdy=false;err('');
   if(sk)try{sk.close()}catch(_){}
   sk=io({reconnection:false});
   sk.on('connect',function(){
@@ -266,6 +267,7 @@ function connect(action,code){
   sk.on('roomCreated',function(c){rm=c;$('rcd').textContent=c;$('ri').style.display='block';err('');});
   sk.on('roomUpdate',function(r){
     if(!r)return;
+    if(!rm&&r.code){rm=r.code;$('ri').style.display='block';}
     const l=$('pls');l.innerHTML='';
     pls={};
     for(var k in r.players){
@@ -276,6 +278,11 @@ function connect(action,code){
       var li=document.createElement('li');
       li.textContent=(SKINS[p.skin]||'🧑')+' '+p.name+(p.ready?' ✅':' ⏳');
       l.appendChild(li);
+      if(k===sk?.id){
+        ME.hp=p.hp;ME.mhp=p.maxHp;ME.lv=p.level;ME.xp=p.exp;ME.orbs=p.orbs||0;ME.kl=p.kills||0;
+        ME.pln=p.plants||[];ME.ing=p.ingredients||{};ME.eq.weapon=p.equipment?.weapon||null;
+        ME.eq.armor=p.equipment?.armor||null;ME.eq.acc=p.equipment?.accessory||null;
+      }
     }
     if(r.code)$('rcd').textContent=r.code;
   });
@@ -328,7 +335,7 @@ $('btnJn').onclick=function(){
 $('rdb').onclick=function(){
   if(!sk||!rm)return;
   rdy=!rdy;this.textContent=rdy?'ГОТОВ ✅':'ГОТОВ';
-  if(rdy)this.classList.add('r');else this.classList.remove('r');
+  if(rdy)this.classList.add('rdy');else this.classList.remove('rdy');
   sk.emit('toggleReady',{code:rm});
 };
 

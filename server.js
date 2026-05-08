@@ -333,19 +333,19 @@ function startGame(room, code) {
     p.inBasement = true;
     p.hp = p.maxHp;
   });
-  for (let i = 0; i < 4; i++) spawnEnemy(room);
-  spawnBoss(room);
+  for (let i = 0; i < 4; i++) spawnEnemy(room, code);
+  spawnBoss(room, code);
   room.enemyTimer = setInterval(() => {
-    if (room.gameState && room.gameState.enemies.length < 8) spawnEnemy(room);
+    if (room.gameState && room.gameState.enemies.length < 8) spawnEnemy(room, code);
   }, 8000);
   room.bossTimer = setInterval(() => {
-    if (room.gameState) spawnBoss(room);
+    if (room.gameState) spawnBoss(room, code);
   }, 45000);
   io.to(code).emit('gameStart', room.gameState);
   io.to(code).emit('roomUpdate', room);
 }
 
-function spawnEnemy(room) {
+function spawnEnemy(room, code) {
   if (!room.gameState) return;
   const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
   const enemy = JSON.parse(JSON.stringify(type));
@@ -354,10 +354,10 @@ function spawnEnemy(room) {
   enemy.x = 200 + Math.random() * 1200;
   enemy.y = 200 + Math.random() * 800;
   room.gameState.enemies.push(enemy);
-  io.to(Object.keys(rooms).find(k => rooms[k] === room)).emit('enemySpawned', enemy);
+  io.to(code).emit('enemySpawned', enemy);
 }
 
-function spawnBoss(room) {
+function spawnBoss(room, code) {
   if (!room.gameState) return;
   const type = BOSS_TYPES[Math.floor(Math.random() * BOSS_TYPES.length)];
   const boss = JSON.parse(JSON.stringify(type));
@@ -366,7 +366,6 @@ function spawnBoss(room) {
   boss.x = 600 + Math.random() * 800;
   boss.y = 400 + Math.random() * 600;
   room.gameState.bosses.push(boss);
-  const code = Object.keys(rooms).find(k => rooms[k] === room);
   io.to(code).emit('bossSpawned', boss);
   io.to(code).emit('chatMsg', { id: 'system', name: '🌍', msg: `⚠️ Босс "${boss.name}" появился в мире!`, skin: -1 });
 }
@@ -415,7 +414,7 @@ function bossDefeated(room, code, socket, boss) {
   }
   socket.emit('bossDefeated', { id: boss.id, orbs: orbsReward, drops });
   io.to(code).emit('bossDied', { id: boss.id, x: boss.x, y: boss.y, name: boss.name });
-  setTimeout(() => spawnBoss(room), 15000);
+  setTimeout(() => spawnBoss(room, code), 15000);
 }
 
 function generateWorld() {
