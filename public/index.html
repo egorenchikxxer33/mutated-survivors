@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mutated Survivors</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a12;color:#ddd;font-family:'Courier New',monospace;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center}
+#lobby{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:40px;border-radius:20px;border:2px solid #4a4a6a;width:500px;max-width:90%;box-shadow:0 0 60px rgba(0,255,100,.1)}
+#lobby h1{text-align:center;font-size:28px;margin-bottom:5px;background:linear-gradient(90deg,#4f4,#4ff,#f4f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}
+#lobby .sub{text-align:center;color:#888;font-size:12px;margin-bottom:25px}
+.input-group{margin-bottom:15px}
+.input-group label{display:block;font-size:12px;color:#8a8;margin-bottom:4px}
+.input-group input{width:100%;padding:10px 14px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;color:#ddd;font-size:14px;outline:0}
+.input-group input:focus{border-color:#4f4;box-shadow:0 0 15px rgba(0,255,68,.15)}
+.row{display:flex;gap:10px;margin-bottom:15px}
+.row button{flex:1;padding:12px;border:0;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;letter-spacing:1px;transition:.2s}
+.btn-create{background:linear-gradient(135deg,#4f4,#2a2);color:#000}
+.btn-create:hover{box-shadow:0 0 25px rgba(0,255,68,.4)}
+.btn-join{background:linear-gradient(135deg,#4ff,#2aa);color:#000}
+.btn-join:hover{box-shadow:0 0 25px rgba(0,255,255,.4)}
+#lobby .skin-select{display:flex;gap:8px;justify-content:center;margin:15px 0}
+.skin-option{width:40px;height:40px;border-radius:50%;border:3px solid #333;cursor:pointer;transition:.2s;position:relative}
+.skin-option:hover{border-color:#4f4;transform:scale(1.1)}
+.skin-option.active{border-color:#4f4;box-shadow:0 0 15px rgba(0,255,68,.3)}
+.skin-option .emoji{font-size:20px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.room-info{background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;padding:15px;margin:15px 0;text-align:center}
+.room-info .code{font-size:32px;letter-spacing:6px;color:#4f4;font-weight:700}
+.room-info .share{font-size:11px;color:#888;margin-top:6px}
+.player-list{list-style:none;margin:10px 0}
+.player-list li{padding:6px 10px;background:#0a0a18;margin:3px 0;border-radius:4px;border-left:3px solid #4f4;font-size:13px}
+.ready-btn{width:100%;padding:12px;border:0;border-radius:8px;font-size:16px;cursor:pointer;font-weight:700;background:linear-gradient(135deg,#4f4,#2a2);color:#000}
+.ready-btn.ready{background:linear-gradient(135deg,#ff4,#a80);color:#000}
+.ready-btn:hover{opacity:.9}
+
+#game{display:none;position:relative;width:100vw;height:100vh}
+#game canvas{display:block;background:#1a1a2a}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#ui>*{pointer-events:auto}
+
+#hud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:13px}
+#hud .info{background:rgba(0,0,0,.7);padding:8px 14px;border-radius:8px;border:1px solid #3a3a5a}
+#hud .hp-bar{width:120px;height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:4px}
+#hud .hp-fill{height:100%;background:linear-gradient(90deg,#f44,#4f4);border-radius:5px;transition:width .3s}
+
+#inventory{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid #4a4a6a;border-radius:12px;padding:10px;display:flex;gap:6px}
+.inv-slot{width:50px;height:50px;background:#1a1a2e;border:1px solid #3a3a5a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;position:relative;cursor:pointer;transition:.2s}
+.inv-slot:hover{border-color:#4f4}
+.inv-slot.has-item{background:#1a2a1e;border-color:#4a8}
+.inv-slot .item-name{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#aaa;white-space:nowrap}
+.inv-slot.equip{border-color:#a4f}
+.inv-slot .qty{position:absolute;top:-6px;right:-6px;background:#f44;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;display:flex;align-items:center;justify-content:center}
+
+#action-bar{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.action-btn{padding:8px 16px;background:rgba(0,0,0,.7);border:1px solid #4a4a6a;border-radius:8px;color:#ddd;font-size:12px;cursor:pointer;transition:.2s}
+.action-btn:hover{background:#2a2a4a;border-color:#4f4}
+.action-btn.active{border-color:#4f4;background:#1a3a1a}
+
+#orb-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column}
+#orb-screen .orb-container{width:200px;height:200px;position:relative;cursor:pointer}
+.orb{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;transition:.3s;position:relative}
+.orb.common{background:radial-gradient(circle at 30% 30%,#4f4,#080);box-shadow:0 0 40px rgba(0,255,68,.3)}
+.orb.rare{background:radial-gradient(circle at 30% 30%,#4ff,#088);box-shadow:0 0 50px rgba(0,255,255,.4)}
+.orb.epic{background:radial-gradient(circle at 30% 30%,#f4f,#808);box-shadow:0 0 60px rgba(255,0,255,.4)}
+.orb.shake{animation:shake .5s}
+.orb.open{animation:orbOpen .8s forwards}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+@keyframes orbOpen{0%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}100%{transform:scale(0);opacity:0}}
+.orb-result{text-align:center;margin-top:20px;display:none}
+.orb-result .r-name{font-size:24px;font-weight:700}
+.orb-result .r-rarity{font-size:13px;margin-top:4px}
+.orb-result .r-desc{font-size:13px;color:#aaa;margin-top:6px}
+.orb-result .close-btn{margin-top:20px;padding:10px 30px;background:linear-gradient(135deg,#4f4,#2a2);border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;color:#000}
+
+#crafting-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,18,.95);border:2px solid #4a4a6a;border-radius:12px;padding:20px;display:none;width:350px;max-width:90%}
+#crafting-panel h3{text-align:center;color:#4f4;margin-bottom:12px}
+.craft-recipe{padding:8px 12px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:6px;margin:4px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.2s}
+.craft-recipe:hover{border-color:#4f4}
+.craft-recipe .craft-name{font-size:13px}
+.craft-recipe .craft-cost{font-size:11px;color:#888}
+.craft-recipe .craft-btn{padding:4px 12px;background:#4f4;color:#000;border:0;border-radius:4px;cursor:pointer;font-size:11px}
+
+#plants-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,18,.95);border:2px solid #4a4a6a;border-radius:12px;padding:20px;display:none;width:400px;max-width:90%}
+#plants-panel h3{text-align:center;color:#4f4;margin-bottom:12px}
+.plant-card{padding:10px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;margin:4px 0;display:flex;align-items:center;gap:10px}
+.plant-card .p-color{width:30px;height:30px;border-radius:50%;flex-shrink:0}
+.plant-card .p-info{flex:1}
+.plant-card .p-name{font-size:13px}
+.plant-card .p-lvl{font-size:11px;color:#888}
+.plant-card .p-hp{height:4px;background:#333;border-radius:2px;margin-top:3px}
+.plant-card .p-hp-fill{height:100%;background:#4f4;border-radius:2px;transition:width .3s}
+
+.close-panel{position:absolute;top:8px;right:12px;font-size:20px;cursor:pointer;color:#888}
+.close-panel:hover{color:#f44}
+
+#chat{position:absolute;bottom:140px;left:12px;width:250px;max-height:150px;background:rgba(0,0,0,.6);border:1px solid #3a3a5a;border-radius:8px;padding:6px;overflow-y:auto;font-size:11px}
+#chat .msg{color:#aaa;margin:2px 0}
+#chat .msg .name{color:#4f4}
+
+#minimap{position:absolute;top:12px;right:12px;width:120px;height:90px;background:rgba(0,0,0,.6);border:1px solid #3a3a5a;border-radius:6px;overflow:hidden}
+#minimap canvas{width:100%;height:100%}
+
+#death-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(80,0,0,.8);display:none;align-items:center;justify-content:center;flex-direction:column;font-size:24px;color:#f44}
+#death-screen .respawn-btn{margin-top:20px;padding:12px 40px;background:#4f4;border:0;border-radius:8px;cursor:pointer;font-size:16px;font-weight:700;color:#000}
+
+@media(max-width:600px){
+  #inventory{gap:3px}
+  .inv-slot{width:38px;height:38px;font-size:8px}
+  .action-btn{padding:5px 10px;font-size:10px}
+  #chat{width:160px;font-size:10px;bottom:120px}
+}
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <h1>MUTATED SURVIVORS</h1>
+  <div class="sub">выживи в мире мутантов</div>
+  <div class="input-group">
+    <label>Имя персонажа</label>
+    <input type="text" id="nickname" placeholder="Введи имя..." maxlength="12" value="Выживший">
+  </div>
+  <div class="input-group">
+    <label>Выбери персонажа</label>
+    <div class="skin-select" id="skinSelect"></div>
+  </div>
+  <div class="row">
+    <button class="btn-create" onclick="createRoom()">СОЗДАТЬ</button>
+    <button class="btn-join" onclick="joinRoom()">ВОЙТИ</button>
+  </div>
+  <div class="input-group">
+    <label>Код комнаты</label>
+    <input type="text" id="roomCode" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:4px;font-size:18px;text-align:center">
+  </div>
+  <div id="roomInfo" style="display:none">
+    <div class="room-info">
+      <div class="share">код комнаты</div>
+      <div class="code" id="roomCodeDisplay"></div>
+      <div class="share">поделись кодом с друзьями</div>
+    </div>
+    <ul class="player-list" id="playerList"></ul>
+    <button class="ready-btn" id="readyBtn" onclick="toggleReady()">ГОТОВ</button>
+  </div>
+  <div id="errorMsg" style="color:#f44;text-align:center;margin-top:10px;font-size:12px;display:none"></div>
+</div>
+
+<div id="game">
+  <canvas id="canvas"></canvas>
+  <div id="ui">
+    <div id="hud">
+      <div class="info">
+        <div id="playerNameHud">Выживший</div>
+        <div class="hp-bar"><div class="hp-fill" id="hpFill" style="width:100%"></div></div>
+        <div style="font-size:10px;color:#888;margin-top:2px"><span id="hpText">100</span>/100</div>
+      </div>
+      <div class="info" style="text-align:right">
+        <div>🔮 <span id="orbCount">0</span></div>
+        <div style="font-size:10px;color:#888" id="locationText">Подвал</div>
+      </div>
+    </div>
+    <div id="action-bar">
+      <button class="action-btn" onclick="openOrbScreen()">🔮 Открыть орб</button>
+      <button class="action-btn" onclick="showCrafting()">⚒ Крафт</button>
+      <button class="action-btn" onclick="showPlants()">🌱 Растения</button>
+      <button class="action-btn" onclick="goToWorld()" id="worldBtn">🚪 В мир</button>
+      <button class="action-btn" onclick="goToBasement()" id="basementBtn" style="display:none">🏠 В подвал</button>
+    </div>
+    <div id="inventory"></div>
+    <div id="orb-screen">
+      <div class="orb-container" onclick="openOrb()">
+        <div class="orb common" id="orbDisplay">
+          <span id="orbInner">🔮</span>
+        </div>
+      </div>
+      <div class="orb-result" id="orbResult">
+        <div class="r-name" id="rName"></div>
+        <div class="r-rarity" id="rRarity"></div>
+        <div class="r-desc" id="rDesc"></div>
+        <button class="close-btn" onclick="closeOrbScreen()">Круто!</button>
+      </div>
+      <div style="margin-top:15px;color:#888;font-size:12px">Орбов: <span id="orbScreenCount">0</span></div>
+    </div>
+    <div id="crafting-panel">
+      <span class="close-panel" onclick="hideCrafting()">✕</span>
+      <h3>⚒ Крафт</h3>
+      <div id="craftList"></div>
+      <div style="margin-top:10px;font-size:11px;color:#888">
+        Ингредиенты: <span id="ingredientsDisplay">ягоды: 0, корни: 0, слизь: 0</span>
+      </div>
+    </div>
+    <div id="plants-panel">
+      <span class="close-panel" onclick="hidePlants()">✕</span>
+      <h3>🌱 Твои растения</h3>
+      <div id="plantsList"></div>
+      <div style="margin-top:10px;font-size:11px;color:#888;text-align:center">Растения атакуют врагов автоматически</div>
+    </div>
+    <div id="chat"></div>
+    <div id="minimap"><canvas id="minimapCanvas"></canvas></div>
+    <div id="death-screen">
+      <div>ТЫ ПОГИБ</div>
+      <div style="font-size:14px;color:#aaa;margin-top:6px">возвращайся в подвал...</div>
+      <button class="respawn-btn" onclick="respawn()">Возродиться</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SKINS = ['🧑','👨','👩','🧔','👱','🧓','👨‍🦰','👩‍🦱','👨‍🦳','👩‍🦲','🧑‍🦰','🧑‍🦳'];
+const PLANTS_EMOJI = { radiation_wave: '☢️', spike_shot: '🌵', heal_aura: '🌿', fire_blast: '🔥', poison_cloud: '☠️', chain_lightning: '⚡', crystal_shield: '💎' };
+const PLANT_COLORS = { radiation_wave: '#4f4', spike_shot: '#a4a', heal_aura: '#4a8', fire_blast: '#f44', poison_cloud: '#f4f', chain_lightning: '#ff4', crystal_shield: '#4ff' };
+
+let socket = null;
+let currentRoom = null;
+let currentSkin = 0;
+let players = {};
+let worldData = null;
+let myState = { x: 400, y: 300, hp: 100, maxHp: 100, dir: 'down', orbs: 0, inventory: [], plants: [], equipment: { weapon: null, armor: null, accessory: null }, ingredients: {} };
+let enemies = [];
+let bosses = [];
+let keys = {};
+let camera = { x: 0, y: 0 };
+let gameRunning = false;
+let inBasement = true;
+let animFrame = 0;
+let orbOpening = false;
+let plantProjectiles = [];
+let particles = [];
+let isReady = false;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimapCanvas');
+const minimapCtx = minimapCanvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  minimapCanvas.width = 120;
+  minimapCanvas.height = 90;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Skin selection
+const skinSelect = document.getElementById('skinSelect');
+SKINS.forEach((s, i) => {
+  const d = document.createElement('div');
+  d.className = 'skin-option' + (i === 0 ? ' active' : '');
+  d.innerHTML = `<span class="emoji">${s}</span>`;
+  d.onclick = () => { skinSelect.querySelectorAll('.skin-option').forEach(el => el.classList.remove('active')); d.classList.add('active'); currentSkin = i; };
+  skinSelect.appendChild(d);
+});
+
+function getNickname() { return document.getElementById('nickname').value || 'Выживший'; }
+
+function createRoom() {
+  if (socket) socket.disconnect();
+  socket = io();
+  socket.on('connect', () => {
+    socket.emit('createRoom', { name: getNickname(), skin: currentSkin });
+  });
+  setupSocket();
+}
+
+function joinRoom() {
+  const code = document.getElementById('roomCode').value.toUpperCase();
+  if (!code || code.length < 4) { showError('Введи код комнаты'); return; }
+  if (socket) socket.disconnect();
+  socket = io();
+  socket.on('connect', () => {
+    socket.emit('joinRoom', { code, name: getNickname(), skin: currentSkin });
+  });
+  setupSocket();
+  currentRoom = code;
+}
+
+function setupSocket() {
+  socket.on('roomCreated', (code) => {
+    currentRoom = code;
+    document.getElementById('roomCodeDisplay').textContent = code;
+    document.getElementById('roomInfo').style.display = 'block';
+    document.getElementById('errorMsg').style.display = 'none';
+  });
+  socket.on('roomUpdate', (room) => {
+    if (!room) return;
+    const list = document.getElementById('playerList');
+    list.innerHTML = '';
+    Object.values(room.players).forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = `${SKINS[p.skin] || '🧑'} ${p.name} ${p.ready ? '✅' : '⏳'}`;
+      list.appendChild(li);
+    });
+    if (room.code) document.getElementById('roomCodeDisplay').textContent = room.code;
+  });
+  socket.on('gameStart', (state) => {
+    document.getElementById('lobby').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+    gameRunning = true;
+    inBasement = true;
+    worldData = state?.world;
+    if (worldData) {
+      enemies = state.enemies || [];
+      bosses = state.bosses || [];
+    }
+    resizeCanvas();
+    gameLoop();
+  });
+  socket.on('error', (msg) => showError(msg));
+  socket.on('playerMoved', ({ id, x, y, dir }) => {
+    if (players[id]) { players[id].x = x; players[id].y = y; players[id].dir = dir; }
+  });
+  socket.on('playerAttacked', ({ id, x, y, tx, ty }) => {
+    particles.push({ x: tx, y: ty, life: 20, color: '#ff4', size: 8 });
+  });
+  socket.on('enemyHit', ({ id, hp }) => {
+    const e = enemies.find(en => en.id === id);
+    if (e) { e.hp = hp; }
+  });
+  socket.on('bossHit', ({ id, hp }) => {
+    const b = bosses.find(bo => bo.id === id);
+    if (b) { b.hp = hp; }
+  });
+  socket.on('enemyDefeated', ({ id, orbs, slime }) => {
+    enemies = enemies.filter(e => e.id !== id);
+    myState.orbs += orbs;
+    if (!myState.ingredients) myState.ingredients = {};
+    myState.ingredients.slime = (myState.ingredients.slime || 0) + slime;
+    updateHUD();
+  });
+  socket.on('bossDefeated', ({ id }) => {
+    bosses = bosses.filter(b => b.id !== id);
+  });
+  socket.on('orbResult', ({ plant, rarity, orbsLeft }) => {
+    myState.plants.push(plant);
+    myState.orbs = orbsLeft;
+    document.getElementById('orbScreenCount').textContent = orbsLeft;
+    showOrbResult(plant, rarity);
+  });
+  socket.on('stateUpdate', (data) => {
+    if (data.hp !== undefined) myState.hp = data.hp;
+    if (data.x !== undefined) myState.x = data.x;
+    if (data.y !== undefined) myState.y = data.y;
+    if (data.ingredients) myState.ingredients = data.ingredients;
+    updateHUD();
+  });
+  socket.on('craftSuccess', ({ recipe, result }) => {
+    hideCrafting();
+  });
+  socket.on('playerLeft', (id) => { delete players[id]; });
+  socket.on('playerRespawned', ({ id, x, y }) => {
+    if (players[id]) { players[id].x = x; players[id].y = y; }
+  });
+  socket.on('plantLevelUp', ({ idx, level }) => {
+    if (myState.plants[idx]) myState.plants[idx].level = level;
+  });
+  socket.on('bossDefeated', ({ id }) => {
+    bosses = bosses.filter(b => b.id !== id);
+    particles.push({ x: 800, y: 600, life: 60, color: '#ff4', size: 30 });
+  });
+  socket.on('disconnect', () => {
+    if (gameRunning) { showError('Потеряно соединение с сервером'); }
+  });
+}
+
+function toggleReady() {
+  if (!socket || !currentRoom) return;
+  isReady = !isReady;
+  document.getElementById('readyBtn').textContent = isReady ? 'ГОТОВ ✅' : 'ГОТОВ';
+  document.getElementById('readyBtn').classList.toggle('ready', isReady);
+  socket.emit('toggleReady', { code: currentRoom });
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+// ============== GAME LOOP ==============
+let gameLoopRunning = false;
+function gameLoop() {
+  if (!gameRunning) return;
+  gameLoopRunning = true;
+  update();
+  render();
+  animFrame++;
+  requestAnimationFrame(gameLoop);
+}
+
+// ============== INPUT ==============
+document.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'e' && !inBasement) openOrbScreen();
+  if (e.key === 'c') showCrafting();
+  if (e.key === 'p') showPlants();
+  if (e.key === 'f') collectNearbyResource();
+  if (e.key === ' ') { e.preventDefault(); attack(); }
+});
+document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+canvas.addEventListener('click', (e) => {
+  if (inBasement) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left + camera.x;
+  const my = e.clientY - rect.top + camera.y;
+  attack(mx, my);
+});
+
+// ============== UPDATE ==============
+function update() {
+  if (!socket || !currentRoom) return;
+  if (inBasement) {
+    updateBasement();
+  } else {
+    updateWorld();
+    updateEnemies();
+    updateBosses();
+    updateProjectiles();
+    updateParticles();
+    updateResourceCollision();
+  }
+  updateHUD();
+}
+
+function updateBasement() {
+  // Basement is static, just render
+  if (animFrame % 30 === 0 && socket && currentRoom) {
+    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir || 'down' });
+  }
+}
+
+function updateWorld() {
+  let speed = 3;
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup']) dy = -speed;
+  if (keys['s'] || keys['arrowdown']) dy = speed;
+  if (keys['a'] || keys['arrowleft']) dx = -speed;
+  if (keys['d'] || keys['arrowright']) dx = speed;
+
+  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+  const newX = myState.x + dx;
+  const newY = myState.y + dy;
+
+  // World bounds
+  const w = worldData ? worldData.width : 1600;
+  const h = worldData ? worldData.height : 1200;
+  if (newX > 20 && newX < w - 20) myState.x = newX;
+  if (newY > 20 && newY < h - 20) myState.y = newY;
+
+  if (dx > 0) myState.dir = 'right';
+  else if (dx < 0) myState.dir = 'left';
+  else if (dy > 0) myState.dir = 'down';
+  else if (dy < 0) myState.dir = 'up';
+
+  // Check obstacle collision
+  if (worldData) {
+    for (const obs of worldData.obstacles) {
+      if (myState.x > obs.x - 20 && myState.x < obs.x + obs.w + 20 &&
+          myState.y > obs.y - 20 && myState.y < obs.y + obs.h + 20) {
+        myState.x -= dx;
+        myState.y -= dy;
+      }
+    }
+  }
+
+  // Auto-attack from plants
+  if (myState.plants && animFrame % 60 === 0) {
+    myState.plants.forEach((plant, idx) => {
+      if (enemies.length > 0) {
+        const target = enemies[0];
+        const dx = target.x - myState.x, dy = target.y - myState.y;
+        if (dx * dx + dy * dy < 30000) {
+          plantProjectiles.push({ x: myState.x, y: myState.y, tx: target.x, ty: target.y, life: 30, color: PLANT_COLORS[plant.ability] || '#4f4', plantIdx: idx, targetId: target.id, targetType: 'enemy' });
+        }
+      } else if (bosses.length > 0) {
+        const target = bosses[0];
+        const dx = target.x - myState.x, dy = target.y - myState.y;
+        if (dx * dx + dy * dy < 40000) {
+          plantProjectiles.push({ x: myState.x, y: myState.y, tx: target.x, ty: target.y, life: 30, color: PLANT_COLORS[plant.ability] || '#4f4', plantIdx: idx, targetId: target.id, targetType: 'boss' });
+        }
+      }
+    });
+  }
+
+  // Send position
+  if (animFrame % 2 === 0 && socket && currentRoom) {
+    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
+  }
+}
+
+function updateEnemies() {
+  if (!socket || !currentRoom || animFrame % 15 !== 0) return;
+  enemies.forEach(e => {
+    if (!e.hp || e.hp <= 0) return;
+    const dx = myState.x - e.x;
+    const dy = myState.y - e.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0 && dist < 300) {
+      e.x += (dx / dist) * (e.speed || 1);
+      e.y += (dy / dist) * (e.speed || 1);
+    }
+    if (dist < 30) {
+      socket.emit('playerHit', { code: currentRoom, dmg: e.dmg || 10 });
+    }
+  });
+}
+
+function updateBosses() {
+  if (!socket || !currentRoom || animFrame % 10 !== 0) return;
+  bosses.forEach(b => {
+    if (!b.hp || b.hp <= 0) return;
+    const dx = myState.x - b.x;
+    const dy = myState.y - b.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0 && dist < 400) {
+      b.x += (dx / dist) * (b.speed || 1.5);
+      b.y += (dy / dist) * (b.speed || 1.5);
+    }
+    if (dist < 40) {
+      socket.emit('playerHit', { code: currentRoom, dmg: b.dmg || 15 });
+    }
+  });
+}
+
+function updateProjectiles() {
+  plantProjectiles = plantProjectiles.filter(p => {
+    p.life--;
+    p.x += (p.tx - p.x) / 10;
+    p.y += (p.ty - p.y) / 10;
+    if (p.life <= 0 || Math.abs(p.x - p.tx) < 20) {
+      if (socket && currentRoom) {
+        socket.emit('plantAttack', { code: currentRoom, plantIdx: p.plantIdx, targetId: p.targetId, targetType: p.targetType });
+      }
+      particles.push({ x: p.tx, y: p.ty, life: 15, color: p.color, size: 10 });
+      return false;
+    }
+    return true;
+  });
+}
+
+function updateParticles() {
+  particles = particles.filter(p => {
+    p.life--;
+    p.size *= 0.95;
+    return p.life > 0;
+  });
+}
+
+function updateResourceCollision() {
+  if (!worldData || animFrame % 10 !== 0) return;
+  for (const r of worldData.resources) {
+    if (r.collected) continue;
+    const dx = myState.x - r.x, dy = myState.y - r.y;
+    if (dx * dx + dy * dy < 900) {
+      r.collected = true;
+      if (socket && currentRoom) {
+        socket.emit('collectResource', { code: currentRoom, type: r.type });
+      }
+      particles.push({ x: r.x, y: r.y, life: 20, color: r.color, size: 12 });
+      setTimeout(() => { r.collected = false; }, 15000);
+    }
+  }
+}
+
+function collectNearbyResource() {
+  if (!worldData || inBasement) return;
+  for (const r of worldData.resources) {
+    if (r.collected) continue;
+    const dx = myState.x - r.x, dy = myState.y - r.y;
+    if (dx * dx + dy * dy < 2500) {
+      r.collected = true;
+      if (socket && currentRoom) {
+        socket.emit('collectResource', { code: currentRoom, type: r.type });
+      }
+      particles.push({ x: r.x, y: r.y, life: 20, color: r.color, size: 12 });
+      setTimeout(() => { r.collected = false; }, 15000);
+      break;
+    }
+  }
+}
+
+function attack(mx, my) {
+  if (inBasement || !socket || !currentRoom) return;
+  const tx = mx || myState.x + 50;
+  const ty = my || myState.y;
+  socket.emit('attack', { code: currentRoom, tx, ty });
+  particles.push({ x: myState.x, y: myState.y, life: 10, color: '#fff', size: 6 });
+}
+
+// ============== RENDER ==============
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  camera.x = myState.x - canvas.width / 2;
+  camera.y = myState.y - canvas.height / 2;
+
+  if (inBasement) {
+    renderBasement();
+  } else {
+    renderWorld();
+  }
+  renderMinimap();
+}
+
+function renderBasement() {
+  const cx = canvas.width / 2 - myState.x + 400;
+  const cy = canvas.height / 2 - myState.y + 300;
+
+  // Background
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(cx - 400, cy - 300);
+
+  // Basement walls
+  ctx.fillStyle = '#3a2a1a';
+  ctx.fillRect(0, 0, 800, 600);
+  ctx.fillStyle = '#4a3a2a';
+  for (let i = 0; i < 800; i += 60) {
+    for (let j = 0; j < 600; j += 60) {
+      ctx.fillStyle = (i / 60 + j / 60) % 2 === 0 ? '#3a2a1a' : '#3d2d1d';
+      ctx.fillRect(i, j, 60, 60);
+    }
+  }
+
+  // Floor cracks
+  ctx.strokeStyle = '#2a1a0a';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(100 + i * 150, 0);
+    ctx.lineTo(50 + i * 170, 600);
+    ctx.stroke();
+  }
+
+  // Cabinet (left side)
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(40, 200, 100, 160);
+  ctx.strokeStyle = '#7a5a3a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(40, 200, 100, 160);
+  ctx.fillStyle = '#8a6a3a';
+  ctx.font = '12px monospace';
+  ctx.fillText('ШКАФ', 60, 290);
+  ctx.fillStyle = '#6a4a2a';
+  ctx.fillRect(50, 220, 30, 50);
+  ctx.fillRect(100, 220, 30, 50);
+
+  // Pots (right side)
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = '#8a4a2a';
+    ctx.beginPath();
+    ctx.ellipse(680 + i * 35, 300, 18, 25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#6a3a1a';
+    ctx.beginPath();
+    ctx.ellipse(680 + i * 35, 315, 22, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (myState.plants && myState.plants[i]) {
+      ctx.fillStyle = myState.plants[i].color || '#4f4';
+      ctx.beginPath();
+      ctx.ellipse(680 + i * 35, 270, 12, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Mattresses
+  ctx.fillStyle = '#5a4a3a';
+  ctx.fillRect(200, 450, 150, 80);
+  ctx.fillStyle = '#6a5a4a';
+  ctx.fillRect(400, 450, 150, 80);
+  ctx.fillStyle = '#888';
+  ctx.font = '10px monospace';
+  ctx.fillText('ВОНЮЧИЙ МАТРАС', 210, 490);
+  ctx.fillText('ВОНЮЧИЙ МАТРАС', 410, 490);
+
+  // Door (center top)
+  ctx.fillStyle = '#5a3a1a';
+  ctx.fillRect(360, -10, 80, 40);
+  ctx.strokeStyle = '#8a6a3a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(360, -10, 80, 40);
+  ctx.fillStyle = '#8a6a3a';
+  ctx.font = '10px monospace';
+  ctx.fillText('ВЫХОД', 378, 18);
+
+  // Plant bench with orbs
+  ctx.fillStyle = '#4a3a2a';
+  ctx.fillRect(600, 120, 150, 60);
+  ctx.strokeStyle = '#7a5a3a';
+  ctx.strokeRect(600, 120, 150, 60);
+  ctx.fillStyle = '#4f4';
+  ctx.font = '10px monospace';
+  ctx.fillText('СТОЛ ДЛЯ ОРБОВ', 620, 138);
+  for (let i = 0; i < Math.min(3, myState.orbs || 0); i++) {
+    ctx.fillStyle = '#4f4';
+    ctx.beginPath();
+    ctx.arc(630 + i * 40, 155, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#8f8';
+    ctx.beginPath();
+    ctx.arc(630 + i * 40, 155, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Players in basement
+  renderPlayers(cx, cy);
+
+  ctx.restore();
+
+  // Overlay text
+  ctx.fillStyle = 'rgba(0,0,0,.5)';
+  ctx.fillRect(0, 0, canvas.width, 30);
+  ctx.fillStyle = '#888';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('ПОДВАЛ · нажми E чтобы открыть орб · C — крафт · P — растения', canvas.width / 2, 20);
+  ctx.textAlign = 'left';
+}
+
+function renderWorld() {
+  if (!worldData) return;
+
+  // Background
+  const gradient = ctx.createRadialGradient(0, 0, 0, canvas.width, canvas.height, 600);
+  gradient.addColorStop(0, '#1a2a1a');
+  gradient.addColorStop(1, '#0a0a12');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+
+  // Ground
+  ctx.fillStyle = '#1a2a1a';
+  ctx.fillRect(0, 0, worldData.width, worldData.height);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(50,80,50,.15)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < worldData.width; x += 80) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, worldData.height); ctx.stroke();
+  }
+  for (let y = 0; y < worldData.height; y += 80) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(worldData.width, y); ctx.stroke();
+  }
+
+  // Biomes
+  ctx.fillStyle = 'rgba(50,80,30,.3)';
+  ctx.fillRect(0, 0, 400, 400);
+  ctx.fillStyle = 'rgba(80,50,30,.3)';
+  ctx.fillRect(1000, 600, 600, 600);
+  ctx.fillStyle = 'rgba(30,50,80,.3)';
+  ctx.fillRect(500, 700, 500, 500);
+
+  // Obstacles
+  for (const obs of worldData.obstacles) {
+    ctx.fillStyle = '#2a3a2a';
+    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+    ctx.strokeStyle = '#3a5a3a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+    // Rock detail
+    ctx.fillStyle = '#3a4a3a';
+    ctx.beginPath();
+    ctx.arc(obs.x + obs.w / 2, obs.y + obs.h / 2, Math.min(obs.w, obs.h) / 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Resources
+  for (const r of worldData.resources) {
+    if (r.collected) continue;
+    ctx.fillStyle = r.color || '#4f4';
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.2)';
+    ctx.beginPath();
+    ctx.arc(r.x - 3, r.y - 3, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(r.type === 'radiation_berry' ? '🍇' : '🌿', r.x, r.y + 4);
+    ctx.textAlign = 'left';
+  }
+
+  // Enemies
+  for (const e of enemies) {
+    if (!e.hp || e.hp <= 0) continue;
+    ctx.fillStyle = e.color || '#a44';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.size || 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,100,100,.5)';
+    ctx.beginPath();
+    ctx.arc(e.x - 3, e.y - 4, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('👾', e.x, e.y + 5);
+    ctx.textAlign = 'left';
+    // HP bar
+    const hpW = 30;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(e.x - hpW / 2, e.y - 25, hpW, 4);
+    ctx.fillStyle = e.hp / e.maxHp > 0.5 ? '#4f4' : e.hp / e.maxHp > 0.25 ? '#ff4' : '#f44';
+    ctx.fillRect(e.x - hpW / 2, e.y - 25, hpW * (e.hp / e.maxHp), 4);
+  }
+
+  // Bosses
+  for (const b of bosses) {
+    if (!b.hp || b.hp <= 0) continue;
+    ctx.fillStyle = b.color || '#a55';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.size || 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,0,0,.3)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, (b.size || 40) + 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,200,100,.5)';
+    ctx.beginPath();
+    ctx.arc(b.x - 8, b.y - 8, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '22px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('🐻', b.x, b.y + 8);
+    ctx.textAlign = 'left';
+    // Name + HP
+    ctx.fillStyle = '#f44';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.name || 'БОСС', b.x, b.y - b.size - 10);
+    ctx.textAlign = 'left';
+    const hpW = 50;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(b.x - hpW / 2, b.y - b.size - 22, hpW, 5);
+    ctx.fillStyle = b.hp / b.maxHp > 0.5 ? '#f44' : '#ff4';
+    ctx.fillRect(b.x - hpW / 2, b.y - b.size - 22, hpW * (b.hp / b.maxHp), 5);
+  }
+
+  // Projectiles
+  for (const p of plantProjectiles) {
+    ctx.fillStyle = p.color || '#4f4';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
+    ctx.beginPath();
+    ctx.arc(p.x - 2, p.y - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / 30;
+    ctx.fillStyle = p.color || '#ff4';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size || 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Players
+  renderPlayers(0, 0, true);
+
+  // Player plants that follow
+  if (myState.plants) {
+    myState.plants.forEach((plant, i) => {
+      const angle = (animFrame / 30) + i * 2.1;
+      const px = myState.x + Math.cos(angle) * 30;
+      const py = myState.y + Math.sin(angle) * 30 + 20;
+      ctx.fillStyle = plant.color || '#4f4';
+      ctx.beginPath();
+      ctx.arc(px, py, 8 + plant.level, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.2)';
+      ctx.beginPath();
+      ctx.arc(px - 2, py - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = '7px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Lv' + plant.level, px, py + 16);
+      ctx.textAlign = 'left';
+    });
+  }
+
+  ctx.restore();
+}
+
+function renderPlayers(offX, offY, useCamera) {
+  // Draw other players
+  Object.values(players).forEach(p => {
+    if (p.id === socket?.id) return;
+    let px = p.x || 400, py = p.y || 300;
+    if (useCamera) {
+      px -= camera.x;
+      py -= camera.y;
+    }
+    ctx.fillStyle = `hsl(${p.skin * 30}, 70%, 60%)`;
+    ctx.beginPath();
+    ctx.arc(px, py - 5, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(SKINS[p.skin] || '🧑', px, py + 6);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#8a8';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name || '', px, py - 25);
+    ctx.textAlign = 'left';
+  });
+
+  // Draw myself
+  let px = myState.x, py = myState.y;
+  if (useCamera) {
+    px -= camera.x;
+    py -= camera.y;
+  }
+  if (!useCamera) {
+    px = canvas.width / 2;
+    py = canvas.height / 2;
+  }
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + 18, 16, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body
+  ctx.fillStyle = `hsl(${currentSkin * 30}, 70%, 60%)`;
+  ctx.beginPath();
+  ctx.arc(px, py - 5, 16, 0, Math.PI * 2);
+  ctx.fill();
+  // Face
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(SKINS[currentSkin] || '🧑', px, py + 6);
+  ctx.textAlign = 'left';
+  // Name
+  ctx.fillStyle = '#4f4';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(getNickname(), px, py - 28);
+  ctx.textAlign = 'left';
+}
+
+function renderMinimap() {
+  if (!worldData) return;
+  minimapCtx.fillStyle = 'rgba(0,0,0,.8)';
+  minimapCtx.fillRect(0, 0, 120, 90);
+  const sx = 120 / worldData.width;
+  const sy = 90 / worldData.height;
+
+  // Resources
+  for (const r of worldData.resources) {
+    if (r.collected) continue;
+    minimapCtx.fillStyle = r.color || '#4f4';
+    minimapCtx.fillRect(r.x * sx - 1, r.y * sy - 1, 3, 3);
+  }
+
+  // Enemies
+  for (const e of enemies) {
+    if (!e.hp || e.hp <= 0) continue;
+    minimapCtx.fillStyle = '#f44';
+    minimapCtx.fillRect(e.x * sx - 1, e.y * sy - 1, 3, 3);
+  }
+
+  // Bosses
+  for (const b of bosses) {
+    if (!b.hp || b.hp <= 0) continue;
+    minimapCtx.fillStyle = '#ff0';
+    minimapCtx.beginPath();
+    minimapCtx.arc(b.x * sx, b.y * sy, 4, 0, Math.PI * 2);
+    minimapCtx.fill();
+  }
+
+  // Players
+  Object.values(players).forEach(p => {
+    minimapCtx.fillStyle = '#4af';
+    minimapCtx.fillRect(p.x * sx - 1, p.y * sy - 1, 3, 3);
+  });
+
+  // My position
+  minimapCtx.fillStyle = '#4f4';
+  minimapCtx.beginPath();
+  minimapCtx.arc(myState.x * sx, myState.y * sy, 3, 0, Math.PI * 2);
+  minimapCtx.fill();
+}
+
+// ============== HUD ==============
+function updateHUD() {
+  const hpPct = myState.maxHp ? (myState.hp / myState.maxHp * 100) : 100;
+  document.getElementById('hpFill').style.width = Math.max(0, hpPct) + '%';
+  document.getElementById('hpText').textContent = Math.max(0, Math.round(myState.hp));
+  document.getElementById('orbCount').textContent = myState.orbs || 0;
+  document.getElementById('locationText').textContent = inBasement ? 'Подвал' : 'Открытый мир';
+  document.getElementById('playerNameHud').textContent = getNickname();
+
+  // Inventory
+  const inv = document.getElementById('inventory');
+  inv.innerHTML = '';
+  // Equipment slots
+  ['weapon', 'armor', 'accessory'].forEach(slot => {
+    const div = document.createElement('div');
+    div.className = 'inv-slot equip';
+    const item = myState.equipment?.[slot];
+    if (item) {
+      div.classList.add('has-item');
+      div.innerHTML = `<span style="font-size:16px">${slot === 'weapon' ? '🗡️' : slot === 'armor' ? '🛡️' : '💍'}</span><span class="item-name">${item.name}</span>`;
+    } else {
+      div.innerHTML = `<span style="font-size:10px;color:#555">${slot === 'weapon' ? 'ОРУЖИЕ' : slot === 'armor' ? 'БРОНЯ' : 'АКСЕС'}</span>`;
+    }
+    div.title = item ? `${item.name}${item.dmg ? ' (+' + item.dmg + ' урона)' : ''}${item.def ? ' (+' + item.def + ' защиты)' : ''}` : 'Пусто';
+    inv.appendChild(div);
+  });
+  // Inventory items
+  if (myState.inventory) {
+    myState.inventory.slice(0, 4).forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'inv-slot has-item';
+      div.innerHTML = `<span>📦</span><span class="item-name">${item.name || 'предмет'}</span>`;
+      inv.appendChild(div);
+    });
+  }
+}
+
+// ============== ORB SYSTEM ==============
+function openOrbScreen() {
+  if (myState.orbs <= 0) { showError('Нет орбов!'); return; }
+  document.getElementById('orb-screen').style.display = 'flex';
+  document.getElementById('orbDisplay').className = 'orb common';
+  document.getElementById('orbInner').textContent = '🔮';
+  document.getElementById('orbResult').style.display = 'none';
+  document.getElementById('orbScreenCount').textContent = myState.orbs;
+  orbOpening = false;
+}
+
+function openOrb() {
+  if (orbOpening || !socket || !currentRoom) return;
+  orbOpening = true;
+  const orb = document.getElementById('orbDisplay');
+  const rarities = ['common', 'rare', 'epic'];
+  const r = rarities[Math.floor(Math.random() * rarities.length)];
+  orb.className = 'orb ' + r + ' shake';
+  setTimeout(() => {
+    orb.className = 'orb ' + r + ' open';
+    setTimeout(() => {
+      socket.emit('openOrb', { code: currentRoom });
+    }, 800);
+  }, 500);
+}
+
+function showOrbResult(plant, rarity) {
+  document.getElementById('orbResult').style.display = 'block';
+  document.getElementById('rName').textContent = plant.name;
+  const rarityColors = { common: '#4f4', rare: '#4ff', epic: '#f4f' };
+  const rarityNames = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический' };
+  document.getElementById('rName').style.color = rarityColors[rarity] || '#4f4';
+  document.getElementById('rRarity').textContent = rarityNames[rarity] || rarity;
+  document.getElementById('rRarity').style.color = rarityColors[rarity] || '#4f4';
+  document.getElementById('rDesc').textContent = plant.desc || '';
+  orbOpening = false;
+}
+
+function closeOrbScreen() {
+  document.getElementById('orb-screen').style.display = 'none';
+  updateHUD();
+}
+
+// ============== CRAFTING ==============
+function showCrafting() {
+  if (!inBasement) { showError('Крафтить можно только в подвале'); return; }
+  document.getElementById('crafting-panel').style.display = 'block';
+  const list = document.getElementById('craftList');
+  list.innerHTML = '';
+  const recipes = [
+    { id: 'health_potion', name: '💚 Зелье здоровья', cost: '🍇 x2', desc: '+40 HP' },
+    { id: 'armor_scrap', name: '🛡️ Броня из хлама', cost: '🌿 x2 + 🫧 x1', desc: '+10 защиты' },
+    { id: 'weapon_spike', name: '🗡️ Шипастая дубина', cost: '🌿 x1 + 🫧 x2', desc: '+20 урона' },
+  ];
+  recipes.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'craft-recipe';
+    div.innerHTML = `<div><div class="craft-name">${r.name}</div><div class="craft-cost">${r.cost} — ${r.desc}</div></div><button class="craft-btn" onclick="craftItem('${r.id}')">СКРАФТИТЬ</button>`;
+    list.appendChild(div);
+  });
+  updateIngredients();
+}
+
+function hideCrafting() { document.getElementById('crafting-panel').style.display = 'none'; }
+
+function craftItem(recipe) {
+  if (socket && currentRoom) socket.emit('craft', { code: currentRoom, recipe });
+  setTimeout(updateIngredients, 100);
+}
+
+function updateIngredients() {
+  const ings = myState.ingredients || {};
+  document.getElementById('ingredientsDisplay').textContent =
+    `🍇 ягоды: ${ings.radiation_berry || 0}, 🌿 корни: ${ings.mutant_root || 0}, 🫧 слизь: ${ings.slime || 0}`;
+}
+
+// ============== PLANTS ==============
+function showPlants() {
+  document.getElementById('plants-panel').style.display = 'block';
+  const list = document.getElementById('plantsList');
+  list.innerHTML = '';
+  if (!myState.plants || myState.plants.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#888;padding:20px">У тебя пока нет растений. Открывай орбы! 🔮</div>';
+    return;
+  }
+  myState.plants.forEach((p, i) => {
+    const div = document.createElement('div');
+    div.className = 'plant-card';
+    const hpPct = p.maxHp ? (p.hp / p.maxHp * 100) : 100;
+    const rarityColors = { common: '#4f4', rare: '#4ff', epic: '#f4f' };
+    div.innerHTML = `
+      <div class="p-color" style="background:${p.color || '#4f4'};box-shadow:0 0 10px ${rarityColors[p.rarity] || '#4f4'}"></div>
+      <div class="p-info">
+        <div class="p-name">${PLANTS_EMOJI[p.ability] || '🌱'} ${p.name} <span style="color:${rarityColors[p.rarity] || '#4f4'};font-size:10px">${p.rarity === 'common' ? '★' : p.rarity === 'rare' ? '★★' : '★★★'}</span></div>
+        <div class="p-lvl">Ур. ${p.level} · ${p.desc || ''}</div>
+        <div class="p-hp"><div class="p-hp-fill" style="width:${hpPct}%"></div></div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function hidePlants() { document.getElementById('plants-panel').style.display = 'none'; }
+
+// ============== WORLD NAVIGATION ==============
+function goToWorld() {
+  if (!worldData) {
+    showError('Мир ещё не загружен');
+    return;
+  }
+  inBasement = false;
+  document.getElementById('worldBtn').style.display = 'none';
+  document.getElementById('basementBtn').style.display = 'inline-block';
+  myState.x = 300;
+  myState.y = 300;
+  if (socket && currentRoom) {
+    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
+  }
+}
+
+function goToBasement() {
+  inBasement = true;
+  document.getElementById('worldBtn').style.display = 'inline-block';
+  document.getElementById('basementBtn').style.display = 'none';
+  myState.x = 400;
+  myState.y = 300;
+  if (socket && currentRoom) {
+    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
+  }
+}
+
+function respawn() {
+  myState.hp = myState.maxHp / 2;
+  myState.x = 400;
+  myState.y = 300;
+  inBasement = true;
+  document.getElementById('worldBtn').style.display = 'inline-block';
+  document.getElementById('basementBtn').style.display = 'none';
+  document.getElementById('death-screen').style.display = 'none';
+  if (socket && currentRoom) {
+    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
+    socket.emit('stateUpdate', { hp: myState.hp });
+  }
+  updateHUD();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeOrbScreen();
+    hideCrafting();
+    hidePlants();
+  }
+});
+
+// Prevent context menu
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+console.log('Mutated Survivors loaded!');
+</script>
+</body>
+</html>
