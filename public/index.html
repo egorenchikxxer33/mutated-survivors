@@ -282,6 +282,8 @@ function connect(action,code){
         ME.hp=p.hp;ME.mhp=p.maxHp;ME.lv=p.level;ME.xp=p.exp;ME.orbs=p.orbs||0;ME.kl=p.kills||0;
         ME.pln=p.plants||[];ME.ing=p.ingredients||{};ME.eq.weapon=p.equipment?.weapon||null;
         ME.eq.armor=p.equipment?.armor||null;ME.eq.acc=p.equipment?.accessory||null;
+        rdy=p.ready;$('rdb').textContent=rdy?'ГОТОВ ✅':'ГОТОВ';
+        if(rdy)$('rdb').classList.add('rdy');else $('rdb').classList.remove('rdy');
       }
     }
     if(r.code)$('rcd').textContent=r.code;
