@@ -2,1196 +2,1018 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Mutated Survivors</title>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0a0a12;color:#ddd;font-family:'Courier New',monospace;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center}
-#lobby{background:linear-gradient(135deg,#1a1a2e,#16213e);padding:40px;border-radius:20px;border:2px solid #4a4a6a;width:500px;max-width:90%;box-shadow:0 0 60px rgba(0,255,100,.1)}
-#lobby h1{text-align:center;font-size:28px;margin-bottom:5px;background:linear-gradient(90deg,#4f4,#4ff,#f4f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px}
-#lobby .sub{text-align:center;color:#888;font-size:12px;margin-bottom:25px}
-.input-group{margin-bottom:15px}
-.input-group label{display:block;font-size:12px;color:#8a8;margin-bottom:4px}
-.input-group input{width:100%;padding:10px 14px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;color:#ddd;font-size:14px;outline:0}
-.input-group input:focus{border-color:#4f4;box-shadow:0 0 15px rgba(0,255,68,.15)}
-.row{display:flex;gap:10px;margin-bottom:15px}
-.row button{flex:1;padding:12px;border:0;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;letter-spacing:1px;transition:.2s}
-.btn-create{background:linear-gradient(135deg,#4f4,#2a2);color:#000}
-.btn-create:hover{box-shadow:0 0 25px rgba(0,255,68,.4)}
-.btn-join{background:linear-gradient(135deg,#4ff,#2aa);color:#000}
-.btn-join:hover{box-shadow:0 0 25px rgba(0,255,255,.4)}
-#lobby .skin-select{display:flex;gap:8px;justify-content:center;margin:15px 0}
-.skin-option{width:40px;height:40px;border-radius:50%;border:3px solid #333;cursor:pointer;transition:.2s;position:relative}
-.skin-option:hover{border-color:#4f4;transform:scale(1.1)}
-.skin-option.active{border-color:#4f4;box-shadow:0 0 15px rgba(0,255,68,.3)}
-.skin-option .emoji{font-size:20px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
-.room-info{background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;padding:15px;margin:15px 0;text-align:center}
-.room-info .code{font-size:32px;letter-spacing:6px;color:#4f4;font-weight:700}
-.room-info .share{font-size:11px;color:#888;margin-top:6px}
-.player-list{list-style:none;margin:10px 0}
-.player-list li{padding:6px 10px;background:#0a0a18;margin:3px 0;border-radius:4px;border-left:3px solid #4f4;font-size:13px}
-.ready-btn{width:100%;padding:12px;border:0;border-radius:8px;font-size:16px;cursor:pointer;font-weight:700;background:linear-gradient(135deg,#4f4,#2a2);color:#000}
-.ready-btn.ready{background:linear-gradient(135deg,#ff4,#a80);color:#000}
-.ready-btn:hover{opacity:.9}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0a0a12;color:#ddd;font-family:'Courier New',monospace;overflow:hidden;height:100vh;width:100vw}
 
-#game{display:none;position:relative;width:100vw;height:100vh}
-#game canvas{display:block;background:#1a1a2a}
-#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-#ui>*{pointer-events:auto}
+#lobby{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1a1a2e,#0a0a12);z-index:100}
+#lobby-box{background:rgba(20,20,40,.95);padding:36px;border-radius:20px;border:2px solid #4a4a6a;width:480px;max-width:92vw;box-shadow:0 0 80px rgba(0,255,100,.08)}
+#lobby-box h1{text-align:center;font-size:22px;font-family:'Press Start 2P',monospace;margin-bottom:4px;background:linear-gradient(90deg,#4f4,#4ff,#f4f,#4f4);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:grad 4s linear infinite}
+@keyframes grad{0%{background-position:0}100%{background-position:300%}}
+#lobby-box .sub{text-align:center;color:#666;font-size:9px;margin-bottom:22px;font-family:'Press Start 2P',monospace}
+.lb{padding:10px 14px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;color:#ddd;font-size:13px;outline:0;width:100%}
+.lb:focus{border-color:#4f4;box-shadow:0 0 15px rgba(0,255,68,.15)}
+.lbl{display:block;font-size:10px;color:#8a8;margin-bottom:4px;letter-spacing:1px}
+.in-g{margin-bottom:14px}
+.skin-sel{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+.sk{width:36px;height:36px;border-radius:50%;border:3px solid #333;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;font-size:18px}
+.sk:hover{border-color:#4f4;transform:scale(1.12)}
+.sk.act{border-color:#4f4;box-shadow:0 0 18px rgba(0,255,68,.25)}
+.row{display:flex;gap:10px}
+.row button{flex:1;padding:12px;border:0;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;letter-spacing:1px;transition:.2s}
+.bc{background:linear-gradient(135deg,#4f4,#2a2);color:#000}.bc:hover{box-shadow:0 0 25px rgba(0,255,68,.3)}
+.bj{background:linear-gradient(135deg,#4ff,#2aa);color:#000}.bj:hover{box-shadow:0 0 25px rgba(0,255,255,.3)}
+.ri{background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;padding:14px;margin:12px 0;text-align:center}
+.ri .cd{font-size:30px;letter-spacing:6px;color:#4f4;font-weight:700}
+.ri .sh{font-size:10px;color:#666;margin-top:4px}
+.pll{list-style:none;margin:8px 0;max-height:120px;overflow-y:auto}
+.pll li{padding:5px 8px;background:#0a0a18;margin:2px 0;border-radius:4px;border-left:3px solid #4f4;font-size:12px}
+.rdy{width:100%;padding:12px;border:0;border-radius:8px;font-size:14px;cursor:pointer;font-weight:700;background:linear-gradient(135deg,#4f4,#2a2);color:#000;transition:.2s}
+.rdy.r{background:linear-gradient(135deg,#ff4,#a80);color:#000}
+.err{color:#f44;text-align:center;margin-top:8px;font-size:11px}
 
-#hud{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;font-size:13px}
-#hud .info{background:rgba(0,0,0,.7);padding:8px 14px;border-radius:8px;border:1px solid #3a3a5a}
-#hud .hp-bar{width:120px;height:10px;background:#333;border-radius:5px;overflow:hidden;margin-top:4px}
-#hud .hp-fill{height:100%;background:linear-gradient(90deg,#f44,#4f4);border-radius:5px;transition:width .3s}
+#game{position:relative;width:100vw;height:100vh;background:#0a0a12}
+#game canvas{display:block;width:100%;height:100%}
 
-#inventory{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid #4a4a6a;border-radius:12px;padding:10px;display:flex;gap:6px}
-.inv-slot{width:50px;height:50px;background:#1a1a2e;border:1px solid #3a3a5a;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;position:relative;cursor:pointer;transition:.2s}
-.inv-slot:hover{border-color:#4f4}
-.inv-slot.has-item{background:#1a2a1e;border-color:#4a8}
-.inv-slot .item-name{position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#aaa;white-space:nowrap}
-.inv-slot.equip{border-color:#a4f}
-.inv-slot .qty{position:absolute;top:-6px;right:-6px;background:#f44;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;display:flex;align-items:center;justify-content:center}
+#hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:8px 12px;pointer-events:none;z-index:10}
+#hud>*{pointer-events:auto}
+.hu{background:rgba(0,0,0,.75);padding:6px 12px;border-radius:8px;border:1px solid #3a3a5a;font-size:11px;backdrop-filter:blur(4px)}
+.hp-o{width:130px;height:8px;background:#222;border-radius:4px;overflow:hidden;margin:3px 0}
+.hp-f{height:100%;background:linear-gradient(90deg,#f44,#4f4);border-radius:4px;transition:width .3s;min-width:0}
+.xp-o{width:130px;height:4px;background:#222;border-radius:2px;overflow:hidden;margin:2px 0}
+.xp-f{height:100%;background:linear-gradient(90deg,#44f,#4ff);border-radius:2px;transition:width .3s}
+.hu-sm{font-size:9px;color:#888}
 
-#action-bar{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
-.action-btn{padding:8px 16px;background:rgba(0,0,0,.7);border:1px solid #4a4a6a;border-radius:8px;color:#ddd;font-size:12px;cursor:pointer;transition:.2s}
-.action-btn:hover{background:#2a2a4a;border-color:#4f4}
-.action-btn.active{border-color:#4f4;background:#1a3a1a}
+#action-bar{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:10;pointer-events:none}
+#action-bar>*{pointer-events:auto}
+.ab{padding:7px 14px;background:rgba(0,0,0,.75);border:1px solid #4a4a6a;border-radius:6px;color:#ddd;font-size:11px;cursor:pointer;transition:.15s;backdrop-filter:blur(4px)}
+.ab:hover{background:#2a2a4a;border-color:#4f4;transform:translateY(-2px)}
+.ab.act{border-color:#4f4;background:#1a3a1a}
 
-#orb-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column}
-#orb-screen .orb-container{width:200px;height:200px;position:relative;cursor:pointer}
-.orb{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;transition:.3s;position:relative}
-.orb.common{background:radial-gradient(circle at 30% 30%,#4f4,#080);box-shadow:0 0 40px rgba(0,255,68,.3)}
-.orb.rare{background:radial-gradient(circle at 30% 30%,#4ff,#088);box-shadow:0 0 50px rgba(0,255,255,.4)}
-.orb.epic{background:radial-gradient(circle at 30% 30%,#f4f,#808);box-shadow:0 0 60px rgba(255,0,255,.4)}
-.orb.shake{animation:shake .5s}
-.orb.open{animation:orbOpen .8s forwards}
-@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
-@keyframes orbOpen{0%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.7}100%{transform:scale(0);opacity:0}}
-.orb-result{text-align:center;margin-top:20px;display:none}
-.orb-result .r-name{font-size:24px;font-weight:700}
-.orb-result .r-rarity{font-size:13px;margin-top:4px}
-.orb-result .r-desc{font-size:13px;color:#aaa;margin-top:6px}
-.orb-result .close-btn{margin-top:20px;padding:10px 30px;background:linear-gradient(135deg,#4f4,#2a2);border:0;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;color:#000}
+#bottom-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.85);border-top:1px solid #3a3a5a;padding:6px 8px;display:flex;gap:4px;align-items:center;z-index:10;backdrop-filter:blur(4px)}
+.sl{width:44px;height:44px;background:#111;border:1px solid #333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;position:relative;cursor:pointer;transition:.15s;flex-shrink:0}
+.sl:hover{border-color:#4f4;background:#1a1a2e}
+.sl.ha{background:#1a2a1e;border-color:#4a8}
+.sl.eq{border-color:#a4f;background:#1a1a2e}
+.sl .nm{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-size:7px;color:#888;white-space:nowrap}
+.sl .qt{position:absolute;top:-5px;right:-5px;background:#f44;color:#fff;border-radius:50%;width:15px;height:15px;font-size:8px;display:flex;align-items:center;justify-content:center}
+.sl .lv-badge{position:absolute;top:-5px;left:-5px;background:#4f4;color:#000;border-radius:50%;width:15px;height:15px;font-size:7px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.panel-divider{width:1px;height:30px;background:#333;margin:0 4px}
 
-#crafting-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,18,.95);border:2px solid #4a4a6a;border-radius:12px;padding:20px;display:none;width:350px;max-width:90%}
-#crafting-panel h3{text-align:center;color:#4f4;margin-bottom:12px}
-.craft-recipe{padding:8px 12px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:6px;margin:4px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.2s}
-.craft-recipe:hover{border-color:#4f4}
-.craft-recipe .craft-name{font-size:13px}
-.craft-recipe .craft-cost{font-size:11px;color:#888}
-.craft-recipe .craft-btn{padding:4px 12px;background:#4f4;color:#000;border:0;border-radius:4px;cursor:pointer;font-size:11px}
+/* MODAL */
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(6px)}
+.modal-box{background:rgba(16,16,30,.97);border:2px solid #4a4a6a;border-radius:14px;padding:24px;width:420px;max-width:92vw;max-height:85vh;overflow-y:auto;position:relative}
+.modal-box h3{text-align:center;font-size:15px;margin-bottom:14px;color:#4f4;letter-spacing:1px}
+.mc{position:absolute;top:10px;right:14px;font-size:18px;cursor:pointer;color:#666;transition:.2s}
+.mc:hover{color:#f44}
 
-#plants-panel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,18,.95);border:2px solid #4a4a6a;border-radius:12px;padding:20px;display:none;width:400px;max-width:90%}
-#plants-panel h3{text-align:center;color:#4f4;margin-bottom:12px}
-.plant-card{padding:10px;background:#0a0a18;border:1px solid #3a3a5a;border-radius:8px;margin:4px 0;display:flex;align-items:center;gap:10px}
-.plant-card .p-color{width:30px;height:30px;border-radius:50%;flex-shrink:0}
-.plant-card .p-info{flex:1}
-.plant-card .p-name{font-size:13px}
-.plant-card .p-lvl{font-size:11px;color:#888}
-.plant-card .p-hp{height:4px;background:#333;border-radius:2px;margin-top:3px}
-.plant-card .p-hp-fill{height:100%;background:#4f4;border-radius:2px;transition:width .3s}
+/* ORB */
+.orb-big{width:180px;height:180px;border-radius:50%;margin:10px auto;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;transition:.3s}
+.orb-big.c{background:radial-gradient(circle at 30% 30%,#4f4,#080);box-shadow:0 0 50px rgba(0,255,68,.2)}
+.orb-big.r{background:radial-gradient(circle at 30% 30%,#4ff,#088);box-shadow:0 0 50px rgba(0,255,255,.25)}
+.orb-big.e{background:radial-gradient(circle at 30% 30%,#f4f,#808);box-shadow:0 0 60px rgba(255,0,255,.25)}
+.orb-big.s{animation:shk .4s}
+.orb-big.o{animation:opn .7s forwards}
+@keyframes shk{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}60%{transform:rotate(12deg)}}
+@keyframes opn{0%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.5}100%{transform:scale(0);opacity:0}}
+.or{text-align:center;margin-top:14px;display:none}
+.or .rn{font-size:22px;font-weight:700}
+.or .rr{font-size:11px;margin-top:3px}
+.or .rd{font-size:11px;color:#888;margin-top:4px}
+.oc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;transition:.2s}
 
-.close-panel{position:absolute;top:8px;right:12px;font-size:20px;cursor:pointer;color:#888}
-.close-panel:hover{color:#f44}
+/* CRAFT */
+.cr{padding:7px 10px;background:#0a0a18;border:1px solid #333;border-radius:6px;margin:3px 0;display:flex;justify-content:space-between;align-items:center;transition:.15s;cursor:default}
+.cr:hover{border-color:#4f4}
+.cr .cn{font-size:12px}
+.cr .cc{font-size:10px;color:#666}
+.cr .cb{padding:3px 10px;background:#4f4;color:#000;border:0;border-radius:4px;cursor:pointer;font-size:10px;font-weight:700}
+.cr .cb:hover{opacity:.85}
+.ing{font-size:10px;color:#888;text-align:center;margin-top:10px;padding:6px;background:#0a0a18;border-radius:6px}
 
-#chat{position:absolute;bottom:140px;left:12px;width:250px;max-height:150px;background:rgba(0,0,0,.6);border:1px solid #3a3a5a;border-radius:8px;padding:6px;overflow-y:auto;font-size:11px}
-#chat .msg{color:#aaa;margin:2px 0}
-#chat .msg .name{color:#4f4}
+/* PLANTS */
+.pc{padding:8px 10px;background:#0a0a18;border:1px solid #333;border-radius:6px;margin:3px 0;display:flex;align-items:center;gap:8px;transition:.15s}
+.pc:hover{border-color:#4f4}
+.pc .pd{width:28px;height:28px;border-radius:50%;flex-shrink:0}
+.pc .pi{flex:1}
+.pc .pn{font-size:12px}
+.pc .pl{font-size:9px;color:#888}
+.pc .php{height:3px;background:#222;border-radius:2px;margin:2px 0}
+.pc .phf{height:100%;background:#4f4;border-radius:2px}
+.pc .pab{font-size:9px;color:#4f4}
+.rar-c{color:#4f4}
+.rar-r{color:#4ff}
+.rar-e{color:#f4f}
 
-#minimap{position:absolute;top:12px;right:12px;width:120px;height:90px;background:rgba(0,0,0,.6);border:1px solid #3a3a5a;border-radius:6px;overflow:hidden}
+/* CHAT */
+#chat{position:absolute;bottom:116px;left:8px;width:260px;max-height:140px;background:rgba(0,0,0,.55);border:1px solid #333;border-radius:6px;padding:5px 7px;overflow-y:auto;font-size:10px;z-index:10;pointer-events:none}
+#chat .cm{color:#aaa;margin:1px 0;line-height:1.3}
+#chat .sys{color:#ff4;font-weight:700}
+#chat .nm{color:#4f4}
+#chat-inp{position:absolute;bottom:72px;left:8px;width:260px;padding:5px 8px;background:rgba(0,0,0,.7);border:1px solid #333;border-radius:6px;color:#ddd;font-size:10px;outline:0;display:none;z-index:10}
+#chat-inp:focus{border-color:#4f4}
+
+/* MINIMAP */
+#minimap{position:absolute;top:8px;right:8px;width:100px;height:75px;background:rgba(0,0,0,.55);border:1px solid #333;border-radius:6px;overflow:hidden;z-index:10;pointer-events:none}
 #minimap canvas{width:100%;height:100%}
 
-#death-screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(80,0,0,.8);display:none;align-items:center;justify-content:center;flex-direction:column;font-size:24px;color:#f44}
-#death-screen .respawn-btn{margin-top:20px;padding:12px 40px;background:#4f4;border:0;border-radius:8px;cursor:pointer;font-size:16px;font-weight:700;color:#000}
+/* NOTIFICATION */
+#notif{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:700;pointer-events:none;z-index:60;opacity:0;transition:opacity .5s;text-align:center;text-shadow:0 0 30px rgba(0,0,0,.8)}
+#notif.sh{opacity:1}
 
+/* DROPS */
+.drops{margin-top:8px;display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
+.dr{background:#0a0a18;border:1px solid #333;border-radius:4px;padding:2px 6px;font-size:9px;color:#aaa}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:6px 0}
+.st{background:#0a0a18;border:1px solid #333;border-radius:4px;padding:5px 8px;font-size:10px}
+.st .sv{float:right;color:#4f4}
+
+/* RESPONSIVE */
 @media(max-width:600px){
-  #inventory{gap:3px}
-  .inv-slot{width:38px;height:38px;font-size:8px}
-  .action-btn{padding:5px 10px;font-size:10px}
-  #chat{width:160px;font-size:10px;bottom:120px}
+  #action-bar{bottom:64px;gap:2px}
+  .ab{padding:5px 8px;font-size:9px}
+  .sl{width:36px;height:36px;font-size:8px}
+  .modal-box{width:95vw;padding:16px}
+  #chat{width:180px;bottom:110px;font-size:9px}
+  #chat-inp{width:180px;bottom:66px;font-size:9px}
+  .hu{font-size:9px;padding:4px 8px}
+  .hp-o{width:90px}
+  #minimap{width:70px;height:52px}
 }
 </style>
 </head>
 <body>
 
 <div id="lobby">
-  <h1>MUTATED SURVIVORS</h1>
-  <div class="sub">выживи в мире мутантов</div>
-  <div class="input-group">
-    <label>Имя персонажа</label>
-    <input type="text" id="nickname" placeholder="Введи имя..." maxlength="12" value="Выживший">
-  </div>
-  <div class="input-group">
-    <label>Выбери персонажа</label>
-    <div class="skin-select" id="skinSelect"></div>
-  </div>
-  <div class="row">
-    <button class="btn-create" onclick="createRoom()">СОЗДАТЬ</button>
-    <button class="btn-join" onclick="joinRoom()">ВОЙТИ</button>
-  </div>
-  <div class="input-group">
-    <label>Код комнаты</label>
-    <input type="text" id="roomCode" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:4px;font-size:18px;text-align:center">
-  </div>
-  <div id="roomInfo" style="display:none">
-    <div class="room-info">
-      <div class="share">код комнаты</div>
-      <div class="code" id="roomCodeDisplay"></div>
-      <div class="share">поделись кодом с друзьями</div>
+  <div id="lobby-box">
+    <h1>MUTATED<br>SURVIVORS</h1>
+    <div class="sub">выживи в мире мутантов</div>
+    <div class="in-g">
+      <div class="lbl">ИМЯ</div>
+      <input class="lb" id="nick" placeholder="Введи имя..." maxlength="12" value="Выживший">
     </div>
-    <ul class="player-list" id="playerList"></ul>
-    <button class="ready-btn" id="readyBtn" onclick="toggleReady()">ГОТОВ</button>
+    <div class="in-g">
+      <div class="lbl">ПЕРСОНАЖ</div>
+      <div class="skin-sel" id="skinSel"></div>
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <button class="bc" onclick="createRoom()">СОЗДАТЬ</button>
+      <button class="bj" onclick="joinRoom()">ВОЙТИ</button>
+    </div>
+    <div class="in-g">
+      <div class="lbl">КОД КОМНАТЫ</div>
+      <input class="lb" id="roomCd" placeholder="XXXXXX" style="text-transform:uppercase;letter-spacing:4px;font-size:16px;text-align:center">
+    </div>
+    <div id="roomInfo" style="display:none">
+      <div class="ri">
+        <div class="sh">КОД КОМНАТЫ</div>
+        <div class="cd" id="roomCdDisp"></div>
+        <div class="sh">отправь код друзьям</div>
+      </div>
+      <ul class="pll" id="plList"></ul>
+      <button class="rdy" id="rdyBtn" onclick="toggleReady()">ГОТОВ</button>
+    </div>
+    <div class="err" id="errMsg"></div>
   </div>
-  <div id="errorMsg" style="color:#f44;text-align:center;margin-top:10px;font-size:12px;display:none"></div>
 </div>
 
-<div id="game">
-  <canvas id="canvas"></canvas>
-  <div id="ui">
-    <div id="hud">
-      <div class="info">
-        <div id="playerNameHud">Выживший</div>
-        <div class="hp-bar"><div class="hp-fill" id="hpFill" style="width:100%"></div></div>
-        <div style="font-size:10px;color:#888;margin-top:2px"><span id="hpText">100</span>/100</div>
+<div id="game" style="display:none">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div class="hu">
+      <div id="hudName" style="font-size:10px">Выживший</div>
+      <div class="hp-o"><div class="hp-f" id="hpF" style="width:100%"></div></div>
+      <div class="hu-sm"><span id="hpT">100</span>/<span id="maxHpT">100</span> ❤️</div>
+      <div class="xp-o"><div class="xp-f" id="xpF" style="width:0%"></div></div>
+      <div class="hu-sm">Lv <span id="lvT">1</span> · <span id="expT">0</span>/<span id="expMaxT">50</span></div>
+    </div>
+    <div class="hu" style="text-align:right">
+      <div>🔮 <span id="orbHud">0</span> · 🗡️ <span id="atkHud">15</span> · 🛡️ <span id="defHud">0</span></div>
+      <div class="hu-sm"><span id="locT">Подвал</span> · 💀 <span id="killHud">0</span></div>
+    </div>
+  </div>
+  <div id="action-bar">
+    <button class="ab" onclick="openOrbModal()">🔮</button>
+    <button class="ab" onclick="openCraft()">⚒</button>
+    <button class="ab" onclick="openPlants()">🌱</button>
+    <button class="ab" onclick="openStats()">📊</button>
+    <button class="ab" onclick="goWorld()" id="goWorldBtn">🚪</button>
+    <button class="ab" onclick="goBase()" id="goBaseBtn" style="display:none">🏠</button>
+  </div>
+  <div id="bottom-panel" id="invPanel"></div>
+  <div id="chat"></div>
+  <input id="chat-inp" placeholder="Чат..." maxlength="60" onkeydown="if(event.key==='Enter')sendChat()">
+  <div id="minimap"><canvas id="mm"></canvas></div>
+  <div id="notif"></div>
+
+  <!-- ORB MODAL -->
+  <div class="modal" id="orbModal">
+    <div class="modal-box" style="width:380px;text-align:center">
+      <span class="mc" onclick="closeModal('orbModal')">✕</span>
+      <h3>🔮 ОТКРЫТИЕ ОРБА</h3>
+      <div class="orb-big c" id="orbEl" onclick="openOrb()">
+        <span class="oc" id="orbIcon">🔮</span>
       </div>
-      <div class="info" style="text-align:right">
-        <div>🔮 <span id="orbCount">0</span></div>
-        <div style="font-size:10px;color:#888" id="locationText">Подвал</div>
+      <div style="font-size:11px;color:#888">Орбов: <span id="orbMCount">0</span></div>
+      <div class="or" id="orbRes">
+        <div class="rn" id="orName"></div>
+        <div class="rr" id="orRar"></div>
+        <div class="rd" id="orDesc"></div>
       </div>
     </div>
-    <div id="action-bar">
-      <button class="action-btn" onclick="openOrbScreen()">🔮 Открыть орб</button>
-      <button class="action-btn" onclick="showCrafting()">⚒ Крафт</button>
-      <button class="action-btn" onclick="showPlants()">🌱 Растения</button>
-      <button class="action-btn" onclick="goToWorld()" id="worldBtn">🚪 В мир</button>
-      <button class="action-btn" onclick="goToBasement()" id="basementBtn" style="display:none">🏠 В подвал</button>
-    </div>
-    <div id="inventory"></div>
-    <div id="orb-screen">
-      <div class="orb-container" onclick="openOrb()">
-        <div class="orb common" id="orbDisplay">
-          <span id="orbInner">🔮</span>
-        </div>
-      </div>
-      <div class="orb-result" id="orbResult">
-        <div class="r-name" id="rName"></div>
-        <div class="r-rarity" id="rRarity"></div>
-        <div class="r-desc" id="rDesc"></div>
-        <button class="close-btn" onclick="closeOrbScreen()">Круто!</button>
-      </div>
-      <div style="margin-top:15px;color:#888;font-size:12px">Орбов: <span id="orbScreenCount">0</span></div>
-    </div>
-    <div id="crafting-panel">
-      <span class="close-panel" onclick="hideCrafting()">✕</span>
-      <h3>⚒ Крафт</h3>
+  </div>
+
+  <!-- CRAFT MODAL -->
+  <div class="modal" id="craftModal">
+    <div class="modal-box">
+      <span class="mc" onclick="closeModal('craftModal')">✕</span>
+      <h3>⚒ КРАФТ</h3>
       <div id="craftList"></div>
-      <div style="margin-top:10px;font-size:11px;color:#888">
-        Ингредиенты: <span id="ingredientsDisplay">ягоды: 0, корни: 0, слизь: 0</span>
-      </div>
+      <div class="ing" id="ingDisp">🍇 ягоды: 0 · 🌿 корни: 0 · 🫧 слизь: 0</div>
     </div>
-    <div id="plants-panel">
-      <span class="close-panel" onclick="hidePlants()">✕</span>
-      <h3>🌱 Твои растения</h3>
+  </div>
+
+  <!-- PLANTS MODAL -->
+  <div class="modal" id="plantsModal">
+    <div class="modal-box">
+      <span class="mc" onclick="closeModal('plantsModal')">✕</span>
+      <h3>🌱 РАСТЕНИЯ</h3>
       <div id="plantsList"></div>
-      <div style="margin-top:10px;font-size:11px;color:#888;text-align:center">Растения атакуют врагов автоматически</div>
+      <div style="text-align:center;font-size:9px;color:#888;margin-top:8px">💡 Растения атакуют врагов автоматически</div>
     </div>
-    <div id="chat"></div>
-    <div id="minimap"><canvas id="minimapCanvas"></canvas></div>
-    <div id="death-screen">
-      <div>ТЫ ПОГИБ</div>
-      <div style="font-size:14px;color:#aaa;margin-top:6px">возвращайся в подвал...</div>
-      <button class="respawn-btn" onclick="respawn()">Возродиться</button>
+  </div>
+
+  <!-- STATS MODAL -->
+  <div class="modal" id="statsModal">
+    <div class="modal-box">
+      <span class="mc" onclick="closeModal('statsModal')">✕</span>
+      <h3>📊 СТАТИСТИКА</h3>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+  </div>
+
+  <!-- DEATH -->
+  <div class="modal" id="deathModal">
+    <div class="modal-box" style="text-align:center;border-color:#f44">
+      <h3 style="color:#f44;font-size:22px;margin-bottom:6px">ТЫ ПОГИБ</h3>
+      <div style="font-size:11px;color:#888;margin-bottom:14px">Но подвал принял тебя обратно...</div>
+      <button class="bc" onclick="respawnPlayer()" style="padding:10px 40px;font-size:14px">ВОЗРОДИТЬСЯ</button>
+    </div>
+  </div>
+
+  <!-- LEVEL UP -->
+  <div class="modal" id="lvModal">
+    <div class="modal-box" style="text-align:center;border-color:#ff4">
+      <h3 style="color:#ff4;font-size:20px">⬆ УРОВЕНЬ ПОВЫШЕН!</h3>
+      <div style="font-size:24px;margin:8px 0" id="lvNum">2</div>
+      <div style="font-size:11px;color:#888">HP +20 · MaxHP +10</div>
+      <button class="bc" onclick="closeModal('lvModal')" style="margin-top:12px;padding:8px 30px">КРУТО!</button>
+    </div>
+  </div>
+
+  <!-- BOSS WARNING -->
+  <div class="modal" id="bossWarn">
+    <div class="modal-box" style="text-align:center;border-color:#f44;width:360px">
+      <h3 style="color:#f44;font-size:18px">⚠️ БОСС ПОЯВИЛСЯ!</h3>
+      <div style="font-size:12px;margin:8px 0" id="bossName">...</div>
+      <button class="bj" onclick="closeModal('bossWarn')" style="padding:8px 30px">В БОЙ!</button>
     </div>
   </div>
 </div>
 
 <script>
-const SKINS = ['🧑','👨','👩','🧔','👱','🧓','👨‍🦰','👩‍🦱','👨‍🦳','👩‍🦲','🧑‍🦰','🧑‍🦳'];
-const PLANTS_EMOJI = { radiation_wave: '☢️', spike_shot: '🌵', heal_aura: '🌿', fire_blast: '🔥', poison_cloud: '☠️', chain_lightning: '⚡', crystal_shield: '💎' };
-const PLANT_COLORS = { radiation_wave: '#4f4', spike_shot: '#a4a', heal_aura: '#4a8', fire_blast: '#f44', poison_cloud: '#f4f', chain_lightning: '#ff4', crystal_shield: '#4ff' };
+const S = ['🧑','👨','👩','🧔','👱','🧓','👨‍🦰','👩‍🦱','👨‍🦳','👩‍🦲','🧑‍🦰','🧑‍🦳'];
+const PE = { radiation_wave:'☢️',spike_shot:'🌵',heal_aura:'🌿',light:'💡',thorn_whip:'🌿',spore_explosion:'🍄',fire_blast:'🔥',poison_cloud:'☠️',freeze:'❄️',shield:'🛡️',chain_lightning:'⚡',crystal_shield:'💎',hellfire:'🔥',void_blast:'🌀' };
+const PC = { radiation_wave:'#4f4',spike_shot:'#a4a',heal_aura:'#4a8',light:'#ff8',thorn_whip:'#8a4',spore_explosion:'#f44',fire_blast:'#f84',poison_cloud:'#f4f',freeze:'#4ff',shield:'#a84',chain_lightning:'#ff4',crystal_shield:'#4ff',hellfire:'#f00',void_blast:'#a0f' };
+const RN = { common:'Обычный',rare:'Редкий',epic:'Эпический' };
+const RC = { common:'#4f4',rare:'#4ff',epic:'#f4f' };
 
-let socket = null;
-let currentRoom = null;
-let currentSkin = 0;
-let players = {};
-let worldData = null;
-let myState = { x: 400, y: 300, hp: 100, maxHp: 100, dir: 'down', orbs: 0, inventory: [], plants: [], equipment: { weapon: null, armor: null, accessory: null }, ingredients: {} };
-let enemies = [];
-let bosses = [];
-let keys = {};
-let camera = { x: 0, y: 0 };
-let gameRunning = false;
-let inBasement = true;
-let animFrame = 0;
-let orbOpening = false;
-let plantProjectiles = [];
-let particles = [];
-let isReady = false;
+let socket=null,curRoom=null,curSkin=0,players={},world=null;
+let my={x:400,y:300,hp:100,maxHp:100,dir:'down',orbs:0,inventory:[],plants:[],equip:{weapon:null,armor:null,accessory:null},ingredients:{},level:1,exp:0,kills:0};
+let enemies=[],bosses=[],keys={},cam={x:0,y:0},running=false,inBase=true,af=0,orbOpen=false,ready=false;
+let proj=[],parts=[],dmgNums=[],chatOn=false;
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const minimapCanvas = document.getElementById('minimapCanvas');
-const minimapCtx = minimapCanvas.getContext('2d');
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const mm=document.getElementById('mm'),mc=mm.getContext('2d');
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  minimapCanvas.width = 120;
-  minimapCanvas.height = 90;
+function resize(){
+  c.width=window.innerWidth;c.height=window.innerHeight;
+  mm.width=100;mm.height=75;
 }
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+window.addEventListener('resize',resize);resize();
 
-// Skin selection
-const skinSelect = document.getElementById('skinSelect');
-SKINS.forEach((s, i) => {
-  const d = document.createElement('div');
-  d.className = 'skin-option' + (i === 0 ? ' active' : '');
-  d.innerHTML = `<span class="emoji">${s}</span>`;
-  d.onclick = () => { skinSelect.querySelectorAll('.skin-option').forEach(el => el.classList.remove('active')); d.classList.add('active'); currentSkin = i; };
-  skinSelect.appendChild(d);
+// SKINS
+const ss=document.getElementById('skinSel');
+S.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='sk'+(i===0?' act':'');
+  d.textContent=s;
+  d.onclick=()=>{ss.querySelectorAll('.sk').forEach(e=>e.classList.remove('act'));d.classList.add('act');curSkin=i;};
+  ss.appendChild(d);
 });
 
-function getNickname() { return document.getElementById('nickname').value || 'Выживший'; }
+function nick(){return document.getElementById('nick').value||'Выживший';}
+function e(id){return document.getElementById(id);}
 
-function createRoom() {
-  if (socket) socket.disconnect();
-  socket = io();
-  socket.on('connect', () => {
-    socket.emit('createRoom', { name: getNickname(), skin: currentSkin });
-  });
+function createRoom(){
+  if(socket)socket.disconnect();
+  socket=io();
+  socket.on('connect',()=>socket.emit('createRoom',{name:nick(),skin:curSkin}));
   setupSocket();
 }
-
-function joinRoom() {
-  const code = document.getElementById('roomCode').value.toUpperCase();
-  if (!code || code.length < 4) { showError('Введи код комнаты'); return; }
-  if (socket) socket.disconnect();
-  socket = io();
-  socket.on('connect', () => {
-    socket.emit('joinRoom', { code, name: getNickname(), skin: currentSkin });
-  });
-  setupSocket();
-  currentRoom = code;
+function joinRoom(){
+  const cd=e('roomCd').value.toUpperCase();
+  if(!cd||cd.length<4){shwErr('Введи код');return}
+  if(socket)socket.disconnect();
+  socket=io();
+  socket.on('connect',()=>socket.emit('joinRoom',{code:cd,name:nick(),skin:curSkin}));
+  setupSocket();curRoom=cd;
 }
-
-function setupSocket() {
-  socket.on('roomCreated', (code) => {
-    currentRoom = code;
-    document.getElementById('roomCodeDisplay').textContent = code;
-    document.getElementById('roomInfo').style.display = 'block';
-    document.getElementById('errorMsg').style.display = 'none';
-  });
-  socket.on('roomUpdate', (room) => {
-    if (!room) return;
-    const list = document.getElementById('playerList');
-    list.innerHTML = '';
-    Object.values(room.players).forEach(p => {
-      const li = document.createElement('li');
-      li.textContent = `${SKINS[p.skin] || '🧑'} ${p.name} ${p.ready ? '✅' : '⏳'}`;
-      list.appendChild(li);
+function setupSocket(){
+  socket.on('roomCreated',c=>{curRoom=c;e('roomCdDisp').textContent=c;e('roomInfo').style.display='block';e('errMsg').style.display='none';});
+  socket.on('roomUpdate',r=>{
+    if(!r)return;
+    const l=e('plList');l.innerHTML='';
+    Object.values(r.players).forEach(p=>{
+      const li=document.createElement('li');
+      li.textContent=`${S[p.skin]||'🧑'} ${p.name} ${p.ready?'✅':'⏳'} Lv${p.level||1}`;
+      l.appendChild(li);
     });
-    if (room.code) document.getElementById('roomCodeDisplay').textContent = room.code;
+    if(r.code)e('roomCdDisp').textContent=r.code;
   });
-  socket.on('gameStart', (state) => {
-    document.getElementById('lobby').style.display = 'none';
-    document.getElementById('game').style.display = 'block';
-    gameRunning = true;
-    inBasement = true;
-    worldData = state?.world;
-    if (worldData) {
-      enemies = state.enemies || [];
-      bosses = state.bosses || [];
+  socket.on('gameStart',st=>{
+    e('lobby').style.display='none';e('game').style.display='block';
+    running=true;inBase=true;world=st?.world;
+    enemies=st?.enemies||[];bosses=st?.bosses||[];
+    resize();loop();
+  });
+  socket.on('error',m=>shwErr(m));
+  socket.on('playerMoved',({id,x,y,dir,inBasement})=>{
+    if(players[id]){players[id].x=x;players[id].y=y;players[id].dir=dir;players[id].inBasement=inBasement;}
+  });
+  socket.on('playerAttacked',({id,x,y,tx,ty})=>{
+    parts.push({x:tx,y:ty,life:12,color:'#ff4',size:7});
+    dmgNums.push({x:tx,y:ty-10,text:'💥',life:20,color:'#ff4'});
+  });
+  socket.on('enemyHit',({id,hp,dmg})=>{
+    const e=enemies.find(en=>en.id===id);if(e){e.hp=hp;
+      dmgNums.push({x:e.x,y:e.y-20,text:'-'+dmg,life:20,color:'#f44'});
     }
-    resizeCanvas();
-    gameLoop();
   });
-  socket.on('error', (msg) => showError(msg));
-  socket.on('playerMoved', ({ id, x, y, dir }) => {
-    if (players[id]) { players[id].x = x; players[id].y = y; players[id].dir = dir; }
+  socket.on('bossHit',({id,hp,dmg})=>{
+    const b=bosses.find(bo=>bo.id===id);if(b){b.hp=hp;
+      dmgNums.push({x:b.x,y:b.y-30,text:'-'+dmg,life:25,color:'#ff4'});
+    }
   });
-  socket.on('playerAttacked', ({ id, x, y, tx, ty }) => {
-    particles.push({ x: tx, y: ty, life: 20, color: '#ff4', size: 8 });
+  socket.on('enemySpawned',e=>{enemies.push(e);});
+  socket.on('bossSpawned',b=>{
+    bosses.push(b);
+    e('bossName').textContent=b.name;
+    openModal('bossWarn');
   });
-  socket.on('enemyHit', ({ id, hp }) => {
-    const e = enemies.find(en => en.id === id);
-    if (e) { e.hp = hp; }
+  socket.on('enemyDied',({id,x,y})=>{
+    enemies=enemies.filter(e=>e.id!==id);
+    parts.push({x,y,life:25,color:'#4f4',size:18});
   });
-  socket.on('bossHit', ({ id, hp }) => {
-    const b = bosses.find(bo => bo.id === id);
-    if (b) { b.hp = hp; }
+  socket.on('bossDied',({id,x,y,name})=>{
+    bosses=bosses.filter(b=>b.id!==id);
+    parts.push({x,y,life:40,color:'#ff4',size:30});
+    addChat('🌍','system',`🎉 Босс ${name} повержен!`);
   });
-  socket.on('enemyDefeated', ({ id, orbs, slime }) => {
-    enemies = enemies.filter(e => e.id !== id);
-    myState.orbs += orbs;
-    if (!myState.ingredients) myState.ingredients = {};
-    myState.ingredients.slime = (myState.ingredients.slime || 0) + slime;
-    updateHUD();
+  socket.on('enemyDefeated',({id,orbs,drops})=>{
+    enemies=enemies.filter(e=>e.id!==id);
+    my.orbs+=orbs||0;
+    if(drops)for(const[k,v]of Object.entries(drops)){if(!my.ingredients)my.ingredients={};my.ingredients[k]=(my.ingredients[k]||0)+v;}
+    hud();
   });
-  socket.on('bossDefeated', ({ id }) => {
-    bosses = bosses.filter(b => b.id !== id);
+  socket.on('bossDefeated',({id,orbs,drops})=>{
+    bosses=bosses.filter(b=>b.id!==id);
+    my.orbs+=orbs||0;
+    if(drops)for(const[k,v]of Object.entries(drops)){if(!my.ingredients)my.ingredients={};my.ingredients[k]=(my.ingredients[k]||0)+v;}
+    hud();
   });
-  socket.on('orbResult', ({ plant, rarity, orbsLeft }) => {
-    myState.plants.push(plant);
-    myState.orbs = orbsLeft;
-    document.getElementById('orbScreenCount').textContent = orbsLeft;
-    showOrbResult(plant, rarity);
+  socket.on('orbResult',({plant,rarity,orbsLeft})=>{
+    my.plants.push(plant);my.orbs=orbsLeft;
+    showOrbRes(plant,rarity);
   });
-  socket.on('stateUpdate', (data) => {
-    if (data.hp !== undefined) myState.hp = data.hp;
-    if (data.x !== undefined) myState.x = data.x;
-    if (data.y !== undefined) myState.y = data.y;
-    if (data.ingredients) myState.ingredients = data.ingredients;
-    updateHUD();
+  socket.on('stateUpdate',d=>{
+    if(d.hp!==undefined)my.hp=d.hp;
+    if(d.x!==undefined)my.x=d.x;
+    if(d.y!==undefined)my.y=d.y;
+    if(d.orbs!==undefined)my.orbs=d.orbs;
+    if(d.ingredients)my.ingredients=d.ingredients;
+    hud();
   });
-  socket.on('craftSuccess', ({ recipe, result }) => {
-    hideCrafting();
+  socket.on('craftSuccess',()=>{closeModal('craftModal');});
+  socket.on('playerLeft',id=>{delete players[id];});
+  socket.on('playerRespawned',({id,x,y})=>{if(players[id]){players[id].x=x;players[id].y=y;players[id].inBasement=true;}});
+  socket.on('plantLevelUp',({idx,level})=>{if(my.plants[idx]){my.plants[idx].level=level;my.plants[idx].dmg=(my.plants[idx].dmg||10)+5;}});
+  socket.on('levelUp',({level})=>{
+    my.level=level;e('lvNum').textContent=level;
+    openModal('lvModal');hud();
   });
-  socket.on('playerLeft', (id) => { delete players[id]; });
-  socket.on('playerRespawned', ({ id, x, y }) => {
-    if (players[id]) { players[id].x = x; players[id].y = y; }
-  });
-  socket.on('plantLevelUp', ({ idx, level }) => {
-    if (myState.plants[idx]) myState.plants[idx].level = level;
-  });
-  socket.on('bossDefeated', ({ id }) => {
-    bosses = bosses.filter(b => b.id !== id);
-    particles.push({ x: 800, y: 600, life: 60, color: '#ff4', size: 30 });
-  });
-  socket.on('disconnect', () => {
-    if (gameRunning) { showError('Потеряно соединение с сервером'); }
-  });
+  socket.on('died',()=>{openModal('deathModal');});
+  socket.on('chatMsg',({name,msg,skin})=>addChat(name,skin===undefined?'system':'player',msg,skin));
+  socket.on('disconnect',()=>{if(running){addChat('СИСТЕМА','system','Потеряно соединение!');}});
 }
 
-function toggleReady() {
-  if (!socket || !currentRoom) return;
-  isReady = !isReady;
-  document.getElementById('readyBtn').textContent = isReady ? 'ГОТОВ ✅' : 'ГОТОВ';
-  document.getElementById('readyBtn').classList.toggle('ready', isReady);
-  socket.emit('toggleReady', { code: currentRoom });
+function toggleReady(){
+  if(!socket||!curRoom)return;
+  ready=!ready;e('rdyBtn').textContent=ready?'ГОТОВ ✅':'ГОТОВ';e('rdyBtn').classList.toggle('r',ready);
+  socket.emit('toggleReady',{code:curRoom});
+}
+function shwErr(m){const el=e('errMsg');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+function addChat(from,type,msg,skin){
+  const ch=e('chat');const d=document.createElement('div');d.className='cm';
+  if(type==='system')d.innerHTML=`<span class="sys">${from}</span> ${msg}`;
+  else d.innerHTML=`<span class="nm">${from}</span> ${msg}`;
+  ch.appendChild(d);ch.scrollTop=ch.scrollHeight;
 }
 
-function showError(msg) {
-  const el = document.getElementById('errorMsg');
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 5000);
-}
-
-// ============== GAME LOOP ==============
-let gameLoopRunning = false;
-function gameLoop() {
-  if (!gameRunning) return;
-  gameLoopRunning = true;
-  update();
-  render();
-  animFrame++;
-  requestAnimationFrame(gameLoop);
-}
-
-// ============== INPUT ==============
-document.addEventListener('keydown', (e) => {
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === 'e' && !inBasement) openOrbScreen();
-  if (e.key === 'c') showCrafting();
-  if (e.key === 'p') showPlants();
-  if (e.key === 'f') collectNearbyResource();
-  if (e.key === ' ') { e.preventDefault(); attack(); }
+// ===== INPUT =====
+document.addEventListener('keydown',e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key==='e'){if(inBase)openOrbModal();}
+  if(e.key==='c')openCraft();
+  if(e.key==='p')openPlants();
+  if(e.key==='f')collectNear();
+  if(e.key===' '){e.preventDefault();atk();}
+  if(e.key==='t'||e.key==='T'){e.preventDefault();const inp=e('chat-inp');chatOn=!chatOn;inp.style.display=chatOn?'block':'none';if(chatOn)inp.focus();}
+  if(e.key==='Escape')closeAllModals();
+  if(e.key==='Enter'&&chatOn)sendChat();
 });
-document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
-canvas.addEventListener('click', (e) => {
-  if (inBasement) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left + camera.x;
-  const my = e.clientY - rect.top + camera.y;
-  attack(mx, my);
+document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+c.addEventListener('click',e=>{
+  if(inBase)return;
+  const r=c.getBoundingClientRect();
+  atk(e.clientX-r.left+cam.x,e.clientY-r.top+cam.y);
 });
+c.addEventListener('contextmenu',e=>e.preventDefault());
 
-// ============== UPDATE ==============
-function update() {
-  if (!socket || !currentRoom) return;
-  if (inBasement) {
-    updateBasement();
-  } else {
-    updateWorld();
-    updateEnemies();
-    updateBosses();
-    updateProjectiles();
-    updateParticles();
-    updateResourceCollision();
+// ===== GAME LOOP =====
+function loop(){
+  if(!running)return;
+  upd();rend();af++;
+  requestAnimationFrame(loop);
+}
+
+function upd(){
+  if(!socket||!curRoom)return;
+  updMov();
+  if(!inBase){
+    updEnemies();updBosses();updProj();updParts();updDmgNums();updRes();
+    if(af%30===0)spawnWorldEnemy();
   }
-  updateHUD();
-}
-
-function updateBasement() {
-  // Basement is static, just render
-  if (animFrame % 30 === 0 && socket && currentRoom) {
-    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir || 'down' });
+  hud();
+  if(af%5===0&&socket&&curRoom){
+    socket.emit('playerMove',{code:curRoom,x:my.x,y:my.y,dir:my.dir,inBasement:inBase});
   }
 }
 
-function updateWorld() {
-  let speed = 3;
-  let dx = 0, dy = 0;
-  if (keys['w'] || keys['arrowup']) dy = -speed;
-  if (keys['s'] || keys['arrowdown']) dy = speed;
-  if (keys['a'] || keys['arrowleft']) dx = -speed;
-  if (keys['d'] || keys['arrowright']) dx = speed;
-
-  if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
-
-  const newX = myState.x + dx;
-  const newY = myState.y + dy;
-
-  // World bounds
-  const w = worldData ? worldData.width : 1600;
-  const h = worldData ? worldData.height : 1200;
-  if (newX > 20 && newX < w - 20) myState.x = newX;
-  if (newY > 20 && newY < h - 20) myState.y = newY;
-
-  if (dx > 0) myState.dir = 'right';
-  else if (dx < 0) myState.dir = 'left';
-  else if (dy > 0) myState.dir = 'down';
-  else if (dy < 0) myState.dir = 'up';
-
-  // Check obstacle collision
-  if (worldData) {
-    for (const obs of worldData.obstacles) {
-      if (myState.x > obs.x - 20 && myState.x < obs.x + obs.w + 20 &&
-          myState.y > obs.y - 20 && myState.y < obs.y + obs.h + 20) {
-        myState.x -= dx;
-        myState.y -= dy;
-      }
+function updMov(){
+  let sp=inBase?2:3.5;
+  let dx=0,dy=0;
+  if(keys['w']||keys['arrowup'])dy=-sp;
+  if(keys['s']||keys['arrowdown'])dy=sp;
+  if(keys['a']||keys['arrowleft'])dx=-sp;
+  if(keys['d']||keys['arrowright'])dx=sp;
+  if(dx&&dy){dx*=0.707;dy*=0.707;}
+  const nx=my.x+dx,ny=my.y+dy;
+  const bw=world?world.width:1600,bh=world?world.height:1200;
+  if(nx>10&&nx<bw-10)my.x=nx;
+  if(ny>10&&ny<bh-10)my.y=ny;
+  if(dx>0)my.dir='right';else if(dx<0)my.dir='left';
+  else if(dy>0)my.dir='down';else if(dy<0)my.dir='up';
+  if(!inBase&&world)for(const o of world.obstacles){
+    if(my.x>o.x-18&&my.x<o.x+o.w+18&&my.y>o.y-18&&my.y<o.y+o.h+18){
+      my.x-=dx;my.y-=dy;
     }
   }
-
-  // Auto-attack from plants
-  if (myState.plants && animFrame % 60 === 0) {
-    myState.plants.forEach((plant, idx) => {
-      if (enemies.length > 0) {
-        const target = enemies[0];
-        const dx = target.x - myState.x, dy = target.y - myState.y;
-        if (dx * dx + dy * dy < 30000) {
-          plantProjectiles.push({ x: myState.x, y: myState.y, tx: target.x, ty: target.y, life: 30, color: PLANT_COLORS[plant.ability] || '#4f4', plantIdx: idx, targetId: target.id, targetType: 'enemy' });
+  // Plant auto-attack
+  if(!inBase&&my.plants&&af%40===0){
+    my.plants.forEach((pl,i)=>{
+      let tg=null;
+      if(enemies.length){tg=enemies[0];const dd=tg.x-my.x,ee=tg.y-my.y;
+        if(dd*dd+ee*ee<40000){
+          proj.push({x:my.x,y:my.y,tx:tg.x,ty:tg.y,life:25,color:PC[pl.ability]||'#4f4',pi:i,ti:tg.id,tt:'enemy'});
         }
-      } else if (bosses.length > 0) {
-        const target = bosses[0];
-        const dx = target.x - myState.x, dy = target.y - myState.y;
-        if (dx * dx + dy * dy < 40000) {
-          plantProjectiles.push({ x: myState.x, y: myState.y, tx: target.x, ty: target.y, life: 30, color: PLANT_COLORS[plant.ability] || '#4f4', plantIdx: idx, targetId: target.id, targetType: 'boss' });
+      }else if(bosses.length){tg=bosses[0];const dd=tg.x-my.x,ee=tg.y-my.y;
+        if(dd*dd+ee*ee<50000){
+          proj.push({x:my.x,y:my.y,tx:tg.x,ty:tg.y,life:25,color:PC[pl.ability]||'#ff4',pi:i,ti:tg.id,tt:'boss'});
         }
       }
     });
   }
-
-  // Send position
-  if (animFrame % 2 === 0 && socket && currentRoom) {
-    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
-  }
 }
 
-function updateEnemies() {
-  if (!socket || !currentRoom || animFrame % 15 !== 0) return;
-  enemies.forEach(e => {
-    if (!e.hp || e.hp <= 0) return;
-    const dx = myState.x - e.x;
-    const dy = myState.y - e.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > 0 && dist < 300) {
-      e.x += (dx / dist) * (e.speed || 1);
-      e.y += (dy / dist) * (e.speed || 1);
+function updEnemies(){
+  if(af%10!==0)return;
+  enemies.forEach(e=>{
+    if(!e.hp||e.hp<=0)return;
+    const d={x:my.x-e.x,y:my.y-e.y},dist=Math.sqrt(d.x*d.x+d.y*d.y);
+    if(dist>0&&dist<350){
+      const sp=e.speed||1.5;
+      e.x+=(d.x/dist)*sp;e.y+=(d.y/dist)*sp;
     }
-    if (dist < 30) {
-      socket.emit('playerHit', { code: currentRoom, dmg: e.dmg || 10 });
+    if(dist<28&&socket&&curRoom){
+      socket.emit('playerHit',{code:curRoom,dmg:e.dmg||8});
     }
   });
 }
-
-function updateBosses() {
-  if (!socket || !currentRoom || animFrame % 10 !== 0) return;
-  bosses.forEach(b => {
-    if (!b.hp || b.hp <= 0) return;
-    const dx = myState.x - b.x;
-    const dy = myState.y - b.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > 0 && dist < 400) {
-      b.x += (dx / dist) * (b.speed || 1.5);
-      b.y += (dy / dist) * (b.speed || 1.5);
+function updBosses(){
+  if(af%8!==0)return;
+  bosses.forEach(b=>{
+    if(!b.hp||b.hp<=0)return;
+    const d={x:my.x-b.x,y:my.y-b.y},dist=Math.sqrt(d.x*d.x+d.y*d.y);
+    if(dist>0&&dist<450){
+      b.x+=(d.x/dist)*(b.speed||1.2);
+      b.y+=(d.y/dist)*(b.speed||1.2);
     }
-    if (dist < 40) {
-      socket.emit('playerHit', { code: currentRoom, dmg: b.dmg || 15 });
+    if(dist<42&&socket&&curRoom){
+      socket.emit('playerHit',{code:curRoom,dmg:b.dmg||20});
     }
   });
 }
-
-function updateProjectiles() {
-  plantProjectiles = plantProjectiles.filter(p => {
-    p.life--;
-    p.x += (p.tx - p.x) / 10;
-    p.y += (p.ty - p.y) / 10;
-    if (p.life <= 0 || Math.abs(p.x - p.tx) < 20) {
-      if (socket && currentRoom) {
-        socket.emit('plantAttack', { code: currentRoom, plantIdx: p.plantIdx, targetId: p.targetId, targetType: p.targetType });
-      }
-      particles.push({ x: p.tx, y: p.ty, life: 15, color: p.color, size: 10 });
+function updProj(){
+  proj=proj.filter(p=>{
+    p.life--;p.x+=(p.tx-p.x)/8;p.y+=(p.ty-p.y)/8;
+    if(p.life<=0||Math.abs(p.x-p.tx)<15){
+      if(socket&&curRoom)socket.emit('plantAttack',{code:curRoom,plantIdx:p.pi,targetId:p.ti,targetType:p.tt});
+      parts.push({x:p.tx,y:p.ty,life:10,color:p.color,size:8});
       return false;
     }
     return true;
   });
 }
-
-function updateParticles() {
-  particles = particles.filter(p => {
-    p.life--;
-    p.size *= 0.95;
-    return p.life > 0;
-  });
+function updParts(){
+  parts=parts.filter(p=>{p.life--;p.size*=0.94;return p.life>0;});
 }
-
-function updateResourceCollision() {
-  if (!worldData || animFrame % 10 !== 0) return;
-  for (const r of worldData.resources) {
-    if (r.collected) continue;
-    const dx = myState.x - r.x, dy = myState.y - r.y;
-    if (dx * dx + dy * dy < 900) {
-      r.collected = true;
-      if (socket && currentRoom) {
-        socket.emit('collectResource', { code: currentRoom, type: r.type });
-      }
-      particles.push({ x: r.x, y: r.y, life: 20, color: r.color, size: 12 });
-      setTimeout(() => { r.collected = false; }, 15000);
+function updDmgNums(){
+  dmgNums=dmgNums.filter(d=>{d.life--;d.y-=1.2;return d.life>0;});
+}
+function updRes(){
+  if(!world||af%8!==0)return;
+  for(const r of world.resources){
+    if(r.collected)continue;
+    const dx=my.x-r.x,dy=my.y-r.y;
+    if(dx*dx+dy*dy<900){
+      r.collected=true;
+      if(socket&&curRoom)socket.emit('collectResource',{code:curRoom,type:r.type});
+      parts.push({x:r.x,y:r.y,life:18,color:r.color,size:10});
+      dmgNums.push({x:r.x,y:r.y-8,text:'+2',life:20,color:'#4f4'});
+      setTimeout(()=>{r.collected=false;},12000);
     }
   }
 }
-
-function collectNearbyResource() {
-  if (!worldData || inBasement) return;
-  for (const r of worldData.resources) {
-    if (r.collected) continue;
-    const dx = myState.x - r.x, dy = myState.y - r.y;
-    if (dx * dx + dy * dy < 2500) {
-      r.collected = true;
-      if (socket && currentRoom) {
-        socket.emit('collectResource', { code: currentRoom, type: r.type });
-      }
-      particles.push({ x: r.x, y: r.y, life: 20, color: r.color, size: 12 });
-      setTimeout(() => { r.collected = false; }, 15000);
+function spawnWorldEnemy(){
+  if(!socket||!curRoom||enemies.length>=8)return;
+  if(Math.random()>0.35)return;
+  const types=[{name:'Крыса',hp:35,dmg:5,spd:2.5,sz:12,clr:'#a88'},
+    {name:'Таракан',hp:20,dmg:3,spd:3.5,sz:8,clr:'#8a4'},
+    {name:'Слизень',hp:45,dmg:6,spd:0.8,sz:16,clr:'#4f4'}];
+  const t=types[Math.floor(Math.random()*types.length)];
+  const e={id:'e_local_'+Date.now()+Math.random(),...t,x:my.x-200+Math.random()*400,y:my.y-200+Math.random()*400,hp:t.hp,maxHp:t.hp};
+  if(e.x>20&&e.x<(world?.width||1600)-20&&e.y>20&&e.y<(world?.height||1200)-20)
+    enemies.push(e);
+}
+function collectNear(){
+  if(!world||inBase)return;
+  for(const r of world.resources){
+    if(r.collected)continue;
+    const dx=my.x-r.x,dy=my.y-r.y;
+    if(dx*dx+dy*dy<2500){
+      r.collected=true;
+      if(socket&&curRoom)socket.emit('collectResource',{code:curRoom,type:r.type});
+      parts.push({x:r.x,y:r.y,life:18,color:r.color,size:10});
+      setTimeout(()=>{r.collected=false;},12000);
       break;
     }
   }
 }
-
-function attack(mx, my) {
-  if (inBasement || !socket || !currentRoom) return;
-  const tx = mx || myState.x + 50;
-  const ty = my || myState.y;
-  socket.emit('attack', { code: currentRoom, tx, ty });
-  particles.push({ x: myState.x, y: myState.y, life: 10, color: '#fff', size: 6 });
+function atk(tx,ty){
+  if(inBase||!socket||!curRoom)return;
+  const x=tx||my.x+50,y=ty||my.y;
+  socket.emit('attack',{code:curRoom,tx:x,ty:y});
+  parts.push({x:my.x,y:my.y,life:8,color:'#fff',size:5});
+  // swing anim
+  dmgNums.push({x:my.x+20,y:my.y-10,text:'💥',life:8,color:'#ff4'});
 }
 
-// ============== RENDER ==============
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  camera.x = myState.x - canvas.width / 2;
-  camera.y = myState.y - canvas.height / 2;
-
-  if (inBasement) {
-    renderBasement();
-  } else {
-    renderWorld();
-  }
-  renderMinimap();
+// ===== RENDER =====
+function rend(){
+  ctx.clearRect(0,0,c.width,c.height);
+  cam.x=my.x-c.width/2;cam.y=my.y-c.height/2;
+  if(inBase)rendBase();else rendWorld();
+  rendMM();rendHUD();
 }
-
-function renderBasement() {
-  const cx = canvas.width / 2 - myState.x + 400;
-  const cy = canvas.height / 2 - myState.y + 300;
-
-  // Background
-  ctx.fillStyle = '#2a1a0a';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.translate(cx - 400, cy - 300);
-
-  // Basement walls
-  ctx.fillStyle = '#3a2a1a';
-  ctx.fillRect(0, 0, 800, 600);
-  ctx.fillStyle = '#4a3a2a';
-  for (let i = 0; i < 800; i += 60) {
-    for (let j = 0; j < 600; j += 60) {
-      ctx.fillStyle = (i / 60 + j / 60) % 2 === 0 ? '#3a2a1a' : '#3d2d1d';
-      ctx.fillRect(i, j, 60, 60);
+function rendBase(){
+  ctx.fillStyle='#2a1a0a';ctx.fillRect(0,0,c.width,c.height);
+  ctx.save();ctx.translate(c.width/2-my.x+400,c.height/2-my.y+300);
+  ctx.translate(-400,-300);
+  // Floor
+  for(let i=0;i<800;i+=50)for(let j=0;j<600;j+=50){
+    ctx.fillStyle=(i/50+j/50)%2===0?'#3a2a1a':'#3d2d1d';ctx.fillRect(i,j,50,50);
+  }
+  // Cracks
+  ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=1;
+  for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(60+i*140,0);ctx.lineTo(20+i*160,600);ctx.stroke();}
+  // Walls
+  ctx.fillStyle='#4a3a2a';ctx.fillRect(0,0,800,5);ctx.fillRect(0,595,800,5);ctx.fillRect(0,0,5,600);ctx.fillRect(795,0,5,600);
+  // Cabinet
+  ctx.fillStyle='#5a3a1a';ctx.fillRect(30,180,90,150);ctx.strokeStyle='#7a5a3a';ctx.lineWidth=2;ctx.strokeRect(30,180,90,150);
+  ctx.fillStyle='#6a4a2a';ctx.fillRect(40,195,28,45);ctx.fillRect(82,195,28,45);
+  ctx.fillStyle='#8a6a3a';ctx.font='9px monospace';ctx.fillText('ШАФ',55,275);
+  // Mattress
+  ctx.fillStyle='#5a4a3a';ctx.fillRect(190,440,140,70);ctx.fillStyle='#6a5a4a';ctx.fillRect(370,440,140,70);
+  ctx.fillStyle='#777';ctx.font='8px monospace';ctx.fillText('МАТРАС',220,478);ctx.fillText('МАТРАС',400,478);
+  // Pots
+  for(let i=0;i<4;i++){
+    ctx.fillStyle='#8a4a2a';ctx.beginPath();ctx.ellipse(660+i*32,300,16,22,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#6a3a1a';ctx.beginPath();ctx.ellipse(660+i*32,313,20,7,0,0,Math.PI*2);ctx.fill();
+    if(my.plants&&my.plants[i]){ctx.fillStyle=my.plants[i].color||'#4f4';
+      ctx.beginPath();ctx.ellipse(660+i*32,272,10,18,0,0,Math.PI*2);ctx.fill();
     }
   }
-
-  // Floor cracks
-  ctx.strokeStyle = '#2a1a0a';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    ctx.beginPath();
-    ctx.moveTo(100 + i * 150, 0);
-    ctx.lineTo(50 + i * 170, 600);
-    ctx.stroke();
+  // Orb table
+  ctx.fillStyle='#4a3a2a';ctx.fillRect(580,100,160,55);ctx.strokeStyle='#7a5a3a';ctx.strokeRect(580,100,160,55);
+  ctx.fillStyle='#4f4';ctx.font='8px monospace';ctx.fillText('СТОЛ ОРБОВ',610,118);
+  for(let i=0;i<Math.min(4,my.orbs||0);i++){
+    ctx.fillStyle='#4f4';ctx.beginPath();ctx.arc(610+i*36,135,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#8f8';ctx.beginPath();ctx.arc(610+i*36,135,4,0,Math.PI*2);ctx.fill();
   }
+  // Workbench
+  ctx.fillStyle='#4a3a2a';ctx.fillRect(160,130,140,45);ctx.strokeStyle='#7a5a3a';ctx.strokeRect(160,130,140,45);
+  ctx.fillStyle='#a84';ctx.font='8px monospace';ctx.fillText('ВЕРСТАК',185,158);
+  // Door
+  ctx.fillStyle='#5a3a1a';ctx.fillRect(370,0,60,40);ctx.strokeStyle='#8a6a3a';ctx.strokeRect(370,0,60,40);
+  ctx.fillStyle='#a84';ctx.font='9px monospace';ctx.fillText('ВЫХОД',384,25);
+  // Lamp
+  ctx.fillStyle='rgba(255,255,0,.06)';ctx.beginPath();ctx.arc(400,0,200,0,Math.PI*2);ctx.fill();
 
-  // Cabinet (left side)
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(40, 200, 100, 160);
-  ctx.strokeStyle = '#7a5a3a';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(40, 200, 100, 160);
-  ctx.fillStyle = '#8a6a3a';
-  ctx.font = '12px monospace';
-  ctx.fillText('ШКАФ', 60, 290);
-  ctx.fillStyle = '#6a4a2a';
-  ctx.fillRect(50, 220, 30, 50);
-  ctx.fillRect(100, 220, 30, 50);
-
-  // Pots (right side)
-  for (let i = 0; i < 3; i++) {
-    ctx.fillStyle = '#8a4a2a';
-    ctx.beginPath();
-    ctx.ellipse(680 + i * 35, 300, 18, 25, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#6a3a1a';
-    ctx.beginPath();
-    ctx.ellipse(680 + i * 35, 315, 22, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    if (myState.plants && myState.plants[i]) {
-      ctx.fillStyle = myState.plants[i].color || '#4f4';
-      ctx.beginPath();
-      ctx.ellipse(680 + i * 35, 270, 12, 20, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Mattresses
-  ctx.fillStyle = '#5a4a3a';
-  ctx.fillRect(200, 450, 150, 80);
-  ctx.fillStyle = '#6a5a4a';
-  ctx.fillRect(400, 450, 150, 80);
-  ctx.fillStyle = '#888';
-  ctx.font = '10px monospace';
-  ctx.fillText('ВОНЮЧИЙ МАТРАС', 210, 490);
-  ctx.fillText('ВОНЮЧИЙ МАТРАС', 410, 490);
-
-  // Door (center top)
-  ctx.fillStyle = '#5a3a1a';
-  ctx.fillRect(360, -10, 80, 40);
-  ctx.strokeStyle = '#8a6a3a';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(360, -10, 80, 40);
-  ctx.fillStyle = '#8a6a3a';
-  ctx.font = '10px monospace';
-  ctx.fillText('ВЫХОД', 378, 18);
-
-  // Plant bench with orbs
-  ctx.fillStyle = '#4a3a2a';
-  ctx.fillRect(600, 120, 150, 60);
-  ctx.strokeStyle = '#7a5a3a';
-  ctx.strokeRect(600, 120, 150, 60);
-  ctx.fillStyle = '#4f4';
-  ctx.font = '10px monospace';
-  ctx.fillText('СТОЛ ДЛЯ ОРБОВ', 620, 138);
-  for (let i = 0; i < Math.min(3, myState.orbs || 0); i++) {
-    ctx.fillStyle = '#4f4';
-    ctx.beginPath();
-    ctx.arc(630 + i * 40, 155, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#8f8';
-    ctx.beginPath();
-    ctx.arc(630 + i * 40, 155, 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Players in basement
-  renderPlayers(cx, cy);
-
+  rendPlyrs(-cam.x+my.x-400,-cam.y+my.y-300,false);
   ctx.restore();
-
-  // Overlay text
-  ctx.fillStyle = 'rgba(0,0,0,.5)';
-  ctx.fillRect(0, 0, canvas.width, 30);
-  ctx.fillStyle = '#888';
-  ctx.font = '12px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('ПОДВАЛ · нажми E чтобы открыть орб · C — крафт · P — растения', canvas.width / 2, 20);
-  ctx.textAlign = 'left';
+  // Hint
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,c.width,24);
+  ctx.fillStyle='#888';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillText('E-орб · C-крафт · P-растения · T-чат · WASD-движение',c.width/2,16);
+  ctx.textAlign='left';
 }
-
-function renderWorld() {
-  if (!worldData) return;
-
-  // Background
-  const gradient = ctx.createRadialGradient(0, 0, 0, canvas.width, canvas.height, 600);
-  gradient.addColorStop(0, '#1a2a1a');
-  gradient.addColorStop(1, '#0a0a12');
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
+function rendWorld(){
+  if(!world)return;
+  const grd=ctx.createRadialGradient(0,0,0,c.width,c.height,500);
+  grd.addColorStop(0,'#1a2a1a');grd.addColorStop(1,'#0a0a12');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,c.width,c.height);
+  ctx.save();ctx.translate(-cam.x,-cam.y);
 
   // Ground
-  ctx.fillStyle = '#1a2a1a';
-  ctx.fillRect(0, 0, worldData.width, worldData.height);
-
-  // Grid
-  ctx.strokeStyle = 'rgba(50,80,50,.15)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < worldData.width; x += 80) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, worldData.height); ctx.stroke();
-  }
-  for (let y = 0; y < worldData.height; y += 80) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(worldData.width, y); ctx.stroke();
-  }
+  ctx.fillStyle='#1a2a1a';ctx.fillRect(0,0,world.width,world.height);
+  ctx.strokeStyle='rgba(50,80,50,.08)';ctx.lineWidth=1;
+  for(let x=0;x<world.width;x+=100){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,world.height);ctx.stroke();}
+  for(let y=0;y<world.height;y+=100){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(world.width,y);ctx.stroke();}
 
   // Biomes
-  ctx.fillStyle = 'rgba(50,80,30,.3)';
-  ctx.fillRect(0, 0, 400, 400);
-  ctx.fillStyle = 'rgba(80,50,30,.3)';
-  ctx.fillRect(1000, 600, 600, 600);
-  ctx.fillStyle = 'rgba(30,50,80,.3)';
-  ctx.fillRect(500, 700, 500, 500);
+  ctx.fillStyle='rgba(50,70,30,.2)';ctx.fillRect(0,0,350,350);
+  ctx.fillStyle='rgba(70,40,20,.2)';ctx.fillRect(1050,600,550,600);
+  ctx.fillStyle='rgba(20,40,70,.2)';ctx.fillRect(450,750,550,450);
+  ctx.fillStyle='rgba(60,20,40,.2)';ctx.fillRect(800,100,400,300);
 
   // Obstacles
-  for (const obs of worldData.obstacles) {
-    ctx.fillStyle = '#2a3a2a';
-    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-    ctx.strokeStyle = '#3a5a3a';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-    // Rock detail
-    ctx.fillStyle = '#3a4a3a';
-    ctx.beginPath();
-    ctx.arc(obs.x + obs.w / 2, obs.y + obs.h / 2, Math.min(obs.w, obs.h) / 3, 0, Math.PI * 2);
-    ctx.fill();
+  for(const o of world.obstacles){
+    ctx.fillStyle='#2a3a2a';ctx.fillRect(o.x,o.y,o.w,o.h);
+    ctx.strokeStyle='#3a5a3a';ctx.strokeRect(o.x,o.y,o.w,o.h);
+    ctx.fillStyle='#3a4a3a';
+    ctx.beginPath();ctx.arc(o.x+o.w/2,o.y+o.h/2,Math.min(o.w,o.h)/3,0,Math.PI*2);ctx.fill();
   }
 
   // Resources
-  for (const r of worldData.resources) {
-    if (r.collected) continue;
-    ctx.fillStyle = r.color || '#4f4';
-    ctx.beginPath();
-    ctx.arc(r.x, r.y, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.2)';
-    ctx.beginPath();
-    ctx.arc(r.x - 3, r.y - 3, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(r.type === 'radiation_berry' ? '🍇' : '🌿', r.x, r.y + 4);
-    ctx.textAlign = 'left';
+  for(const r of world.resources){
+    if(r.collected)continue;
+    ctx.fillStyle=r.color||'#4f4';ctx.beginPath();ctx.arc(r.x,r.y,10,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(r.x-2,r.y-2,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.textAlign='center';
+    ctx.fillText(r.type==='radiation_berry'?'🍇':'🌿',r.x,r.y+3);ctx.textAlign='left';
   }
 
   // Enemies
-  for (const e of enemies) {
-    if (!e.hp || e.hp <= 0) continue;
-    ctx.fillStyle = e.color || '#a44';
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, e.size || 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,100,100,.5)';
-    ctx.beginPath();
-    ctx.arc(e.x - 3, e.y - 4, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('👾', e.x, e.y + 5);
-    ctx.textAlign = 'left';
-    // HP bar
-    const hpW = 30;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(e.x - hpW / 2, e.y - 25, hpW, 4);
-    ctx.fillStyle = e.hp / e.maxHp > 0.5 ? '#4f4' : e.hp / e.maxHp > 0.25 ? '#ff4' : '#f44';
-    ctx.fillRect(e.x - hpW / 2, e.y - 25, hpW * (e.hp / e.maxHp), 4);
+  for(const e of enemies){
+    if(!e.hp||e.hp<=0)continue;
+    ctx.fillStyle=e.color||'#a44';
+    ctx.beginPath();ctx.arc(e.x,e.y,e.size||16,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,100,100,.4)';ctx.beginPath();ctx.arc(e.x-3,e.y-4,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='16px monospace';ctx.textAlign='center';
+    ctx.fillText('👾',e.x,e.y+5);ctx.textAlign='left';
+    const hw=26;
+    ctx.fillStyle='#333';ctx.fillRect(e.x-hw/2,e.y-22,hw,3);
+    ctx.fillStyle=e.hp/e.maxHp>.5?'#4f4':e.hp/e.maxHp>.25?'#ff4':'#f44';
+    ctx.fillRect(e.x-hw/2,e.y-22,hw*(e.hp/e.maxHp),3);
+    ctx.fillStyle='#888';ctx.font='7px monospace';ctx.textAlign='center';
+    ctx.fillText(e.name||'?',e.x,e.y-e.size-6);ctx.textAlign='left';
   }
 
   // Bosses
-  for (const b of bosses) {
-    if (!b.hp || b.hp <= 0) continue;
-    ctx.fillStyle = b.color || '#a55';
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.size || 40, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,0,0,.3)';
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, (b.size || 40) + 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,200,100,.5)';
-    ctx.beginPath();
-    ctx.arc(b.x - 8, b.y - 8, 10, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '22px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('🐻', b.x, b.y + 8);
-    ctx.textAlign = 'left';
-    // Name + HP
-    ctx.fillStyle = '#f44';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(b.name || 'БОСС', b.x, b.y - b.size - 10);
-    ctx.textAlign = 'left';
-    const hpW = 50;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(b.x - hpW / 2, b.y - b.size - 22, hpW, 5);
-    ctx.fillStyle = b.hp / b.maxHp > 0.5 ? '#f44' : '#ff4';
-    ctx.fillRect(b.x - hpW / 2, b.y - b.size - 22, hpW * (b.hp / b.maxHp), 5);
+  for(const b of bosses){
+    if(!b.hp||b.hp<=0)continue;
+    ctx.fillStyle=b.color||'#a55';
+    ctx.beginPath();ctx.arc(b.x,b.y,b.size||40,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,0,0,.15)';ctx.beginPath();ctx.arc(b.x,b.y,(b.size||40)+12,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,200,100,.4)';ctx.beginPath();ctx.arc(b.x-6,b.y-6,8,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font:'26px monospace';ctx.textAlign='center';
+    ctx.fillText('👹',b.x,b.y+9);ctx.textAlign='left';
+    ctx.fillStyle='#f44';ctx.font:'9px monospace';ctx.textAlign='center';
+    ctx.fillText(b.name||'БОСС',b.x,b.y-b.size-12);ctx.textAlign='left';
+    const hw=46;
+    ctx.fillStyle='#333';ctx.fillRect(b.x-hw/2,b.y-b.size-24,hw,4);
+    ctx.fillStyle=b.hp/b.maxHp>.5?'#f44':'#ff4';
+    ctx.fillRect(b.x-hw/2,b.y-b.size-24,hw*(b.hp/b.maxHp),4);
   }
 
   // Projectiles
-  for (const p of plantProjectiles) {
-    ctx.fillStyle = p.color || '#4f4';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.3)';
-    ctx.beginPath();
-    ctx.arc(p.x - 2, p.y - 2, 2, 0, Math.PI * 2);
-    ctx.fill();
+  for(const p of proj){
+    ctx.fillStyle=p.color||'#4f4';
+    ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.3)';ctx.beginPath();ctx.arc(p.x-2,p.y-2,2,0,Math.PI*2);ctx.fill();
   }
 
   // Particles
-  for (const p of particles) {
-    ctx.globalAlpha = p.life / 30;
-    ctx.fillStyle = p.color || '#ff4';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size || 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+  for(const p of parts){
+    ctx.globalAlpha=p.life/20;
+    ctx.fillStyle=p.color||'#ff4';ctx.beginPath();ctx.arc(p.x,p.y,p.size||4,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
   }
 
-  // Players
-  renderPlayers(0, 0, true);
+  // Damage numbers
+  for(const d of dmgNums){
+    ctx.globalAlpha=d.life/20;
+    ctx.fillStyle=d.color||'#fff';ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText(d.text,d.x,d.y);ctx.textAlign='left';
+    ctx.globalAlpha=1;
+  }
 
-  // Player plants that follow
-  if (myState.plants) {
-    myState.plants.forEach((plant, i) => {
-      const angle = (animFrame / 30) + i * 2.1;
-      const px = myState.x + Math.cos(angle) * 30;
-      const py = myState.y + Math.sin(angle) * 30 + 20;
-      ctx.fillStyle = plant.color || '#4f4';
-      ctx.beginPath();
-      ctx.arc(px, py, 8 + plant.level, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.2)';
-      ctx.beginPath();
-      ctx.arc(px - 2, py - 3, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.font = '7px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('Lv' + plant.level, px, py + 16);
-      ctx.textAlign = 'left';
+  rendPlyrs(0,0,true);
+
+  // Player plants following
+  if(my.plants){
+    my.plants.forEach((pl,i)=>{
+      const ang=(af/25)+i*2.1;
+      const px=my.x+Math.cos(ang)*28,py=my.y+Math.sin(ang)*28+18;
+      ctx.fillStyle=pl.color||'#4f4';
+      ctx.beginPath();ctx.arc(px,py,6+pl.level,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(px-2,py-2,2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font:'6px monospace';ctx.textAlign='center';
+      ctx.fillText('Lv'+pl.level,px,py+14);ctx.textAlign='left';
+      // Ability indicator
+      ctx.fillStyle='rgba(255,255,255,.1)';
+      ctx.beginPath();ctx.arc(px,py,10+pl.level,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.05)';ctx.stroke();
     });
   }
 
   ctx.restore();
 }
-
-function renderPlayers(offX, offY, useCamera) {
-  // Draw other players
-  Object.values(players).forEach(p => {
-    if (p.id === socket?.id) return;
-    let px = p.x || 400, py = p.y || 300;
-    if (useCamera) {
-      px -= camera.x;
-      py -= camera.y;
+function rendPlyrs(ox,oy,uc){
+  Object.values(players).forEach(p=>{
+    if(p.id===socket?.id)return;
+    let px=p.x||400,py=p.y||300;
+    if(uc){px-=cam.x;py-=cam.y;}
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(px,py+16,12,5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`hsl(${p.skin*25+120},60%,55%)`;
+    ctx.beginPath();ctx.arc(px,py-4,13,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font:'15px monospace';ctx.textAlign='center';
+    ctx.fillText(S[p.skin]||'🧑',px,py+5);ctx.textAlign='left';
+    ctx.fillStyle='#8a8';ctx.font='8px monospace';ctx.textAlign='center';
+    ctx.fillText(p.name||'',px,py-22);ctx.textAlign='left';
+    // HP bar
+    if(p.hp!==undefined){
+      const hw=22;ctx.fillStyle='#333';ctx.fillRect(px-hw/2,py-32,hw,2);
+      ctx.fillStyle='#4f4';ctx.fillRect(px-hw/2,py-32,hw*Math.max(0,p.hp/(p.maxHp||100)),2);
     }
-    ctx.fillStyle = `hsl(${p.skin * 30}, 70%, 60%)`;
-    ctx.beginPath();
-    ctx.arc(px, py - 5, 14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(SKINS[p.skin] || '🧑', px, py + 6);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#8a8';
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(p.name || '', px, py - 25);
-    ctx.textAlign = 'left';
   });
-
-  // Draw myself
-  let px = myState.x, py = myState.y;
-  if (useCamera) {
-    px -= camera.x;
-    py -= camera.y;
-  }
-  if (!useCamera) {
-    px = canvas.width / 2;
-    py = canvas.height / 2;
-  }
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.beginPath();
-  ctx.ellipse(px, py + 18, 16, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Body
-  ctx.fillStyle = `hsl(${currentSkin * 30}, 70%, 60%)`;
-  ctx.beginPath();
-  ctx.arc(px, py - 5, 16, 0, Math.PI * 2);
-  ctx.fill();
-  // Face
-  ctx.fillStyle = '#fff';
-  ctx.font = '20px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(SKINS[currentSkin] || '🧑', px, py + 6);
-  ctx.textAlign = 'left';
-  // Name
-  ctx.fillStyle = '#4f4';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(getNickname(), px, py - 28);
-  ctx.textAlign = 'left';
+  // Myself
+  let px=my.x,py=my.y;
+  if(uc){px-=cam.x;py-=cam.y;}
+  if(!uc){px=c.width/2;py=c.height/2;}
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(px,py+17,15,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=`hsl(${curSkin*25+120},60%,55%)`;
+  ctx.beginPath();ctx.arc(px,py-4,15,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font:'18px monospace';ctx.textAlign='center';
+  ctx.fillText(S[curSkin]||'🧑',px,py+5);ctx.textAlign='left';
+  ctx.fillStyle='#4f4';ctx.font:'9px monospace';ctx.textAlign='center';
+  ctx.fillText(nick(),px,py-26);ctx.textAlign='left';
 }
-
-function renderMinimap() {
-  if (!worldData) return;
-  minimapCtx.fillStyle = 'rgba(0,0,0,.8)';
-  minimapCtx.fillRect(0, 0, 120, 90);
-  const sx = 120 / worldData.width;
-  const sy = 90 / worldData.height;
-
-  // Resources
-  for (const r of worldData.resources) {
-    if (r.collected) continue;
-    minimapCtx.fillStyle = r.color || '#4f4';
-    minimapCtx.fillRect(r.x * sx - 1, r.y * sy - 1, 3, 3);
-  }
-
-  // Enemies
-  for (const e of enemies) {
-    if (!e.hp || e.hp <= 0) continue;
-    minimapCtx.fillStyle = '#f44';
-    minimapCtx.fillRect(e.x * sx - 1, e.y * sy - 1, 3, 3);
-  }
-
-  // Bosses
-  for (const b of bosses) {
-    if (!b.hp || b.hp <= 0) continue;
-    minimapCtx.fillStyle = '#ff0';
-    minimapCtx.beginPath();
-    minimapCtx.arc(b.x * sx, b.y * sy, 4, 0, Math.PI * 2);
-    minimapCtx.fill();
-  }
-
-  // Players
-  Object.values(players).forEach(p => {
-    minimapCtx.fillStyle = '#4af';
-    minimapCtx.fillRect(p.x * sx - 1, p.y * sy - 1, 3, 3);
-  });
-
-  // My position
-  minimapCtx.fillStyle = '#4f4';
-  minimapCtx.beginPath();
-  minimapCtx.arc(myState.x * sx, myState.y * sy, 3, 0, Math.PI * 2);
-  minimapCtx.fill();
+function rendMM(){
+  if(!world)return;
+  mc.fillStyle='rgba(0,0,0,.8)';mc.fillRect(0,0,100,75);
+  const sx=100/world.width,sy=75/world.height;
+  for(const r of world.resources)
+    if(!r.collected){mc.fillStyle=r.color||'#4f4';mc.fillRect(r.x*sx-1,r.y*sy-1,2,2);}
+  for(const e of enemies)
+    if(e.hp&&e.hp>0){mc.fillStyle='#f44';mc.fillRect(e.x*sx-1,e.y*sy-1,2,2);}
+  for(const b of bosses)
+    if(b.hp&&b.hp>0){mc.fillStyle='#ff0';mc.beginPath();mc.arc(b.x*sx,b.y*sy,3,0,Math.PI*2);mc.fill();}
+  Object.values(players).forEach(p=>{mc.fillStyle='#4af';mc.fillRect(p.x*sx-1,p.y*sy-1,2,2);});
+  mc.fillStyle='#4f4';mc.beginPath();mc.arc(my.x*sx,my.y*sy,2.5,0,Math.PI*2);mc.fill();
 }
-
-// ============== HUD ==============
-function updateHUD() {
-  const hpPct = myState.maxHp ? (myState.hp / myState.maxHp * 100) : 100;
-  document.getElementById('hpFill').style.width = Math.max(0, hpPct) + '%';
-  document.getElementById('hpText').textContent = Math.max(0, Math.round(myState.hp));
-  document.getElementById('orbCount').textContent = myState.orbs || 0;
-  document.getElementById('locationText').textContent = inBasement ? 'Подвал' : 'Открытый мир';
-  document.getElementById('playerNameHud').textContent = getNickname();
-
-  // Inventory
-  const inv = document.getElementById('inventory');
-  inv.innerHTML = '';
-  // Equipment slots
-  ['weapon', 'armor', 'accessory'].forEach(slot => {
-    const div = document.createElement('div');
-    div.className = 'inv-slot equip';
-    const item = myState.equipment?.[slot];
-    if (item) {
-      div.classList.add('has-item');
-      div.innerHTML = `<span style="font-size:16px">${slot === 'weapon' ? '🗡️' : slot === 'armor' ? '🛡️' : '💍'}</span><span class="item-name">${item.name}</span>`;
-    } else {
-      div.innerHTML = `<span style="font-size:10px;color:#555">${slot === 'weapon' ? 'ОРУЖИЕ' : slot === 'armor' ? 'БРОНЯ' : 'АКСЕС'}</span>`;
+function rendHUD(){
+  const hpP=my.maxHp?(my.hp/my.maxHp*100):100;
+  e('hpF').style.width=Math.max(0,hpP)+'%';
+  e('hpT').textContent=Math.max(0,Math.round(my.hp));
+  e('maxHpT').textContent=my.maxHp;
+  const expM=my.level*50;
+  e('xpF').style.width=Math.min(100,(my.exp/expM*100))+'%';
+  e('lvT').textContent=my.level;
+  e('expT').textContent=my.exp;e('expMaxT').textContent=expM;
+  e('orbHud').textContent=my.orbs||0;
+  e('atkHud').textContent=15+(my.equip?.weapon?.dmg||0);
+  e('defHud').textContent=my.equip?.armor?.def||0;
+  e('locT').textContent=inBase?'Подвал':'Мир';
+  e('killHud').textContent=my.kills||0;
+  rendInv();
+}
+function rendInv(){
+  const p=e('bottom-panel');p.innerHTML='';
+  // Equip
+  ['weapon','armor','accessory'].forEach(s=>{
+    const d=document.createElement('div');d.className='sl eq';
+    const it=my.equip?.[s];
+    if(it){d.classList.add('ha');
+      d.innerHTML=`<span style="font-size:14px">${s==='weapon'?'🗡️':s==='armor'?'🛡️':'💍'}</span><span class="nm">${it.name.slice(0,8)}</span>`;
+      d.title=it.name+(it.dmg?' +'+it.dmg+' урона':'')+(it.def?' +'+it.def+' защиты':'');
+    }else{
+      d.innerHTML=`<span style="font-size:8px;color:#444">${s==='weapon'?'ОРУЖ':s==='armor'?'БРОН':'АКСЕ'}</span>`;
     }
-    div.title = item ? `${item.name}${item.dmg ? ' (+' + item.dmg + ' урона)' : ''}${item.def ? ' (+' + item.def + ' защиты)' : ''}` : 'Пусто';
-    inv.appendChild(div);
+    p.appendChild(d);
   });
-  // Inventory items
-  if (myState.inventory) {
-    myState.inventory.slice(0, 4).forEach((item, i) => {
-      const div = document.createElement('div');
-      div.className = 'inv-slot has-item';
-      div.innerHTML = `<span>📦</span><span class="item-name">${item.name || 'предмет'}</span>`;
-      inv.appendChild(div);
+  const dv=document.createElement('div');dv.className='panel-divider';p.appendChild(dv);
+  // Plants quick view
+  if(my.plants&&my.plants.length){
+    my.plants.slice(0,3).forEach((pl,i)=>{
+      const d=document.createElement('div');d.className='sl ha';
+      d.innerHTML=`<span style="font-size:14px">${PE[pl.ability]||'🌱'}</span><span class="lv-badge">${pl.level}</span><span class="nm">${pl.name.slice(0,6)}</span>`;
+      d.title=`${pl.name} Lv${pl.level}`;
+      p.appendChild(d);
     });
+    const dv2=document.createElement('div');dv2.className='panel-divider';p.appendChild(dv2);
   }
+  // Orbs
+  const od=document.createElement('div');od.className='sl';
+  od.innerHTML=`<span style="font-size:16px">🔮</span><span class="qt">${my.orbs||0}</span><span class="nm">орбы</span>`;
+  od.onclick=()=>openOrbModal();
+  p.appendChild(od);
+  // Ingredients
+  const ings=my.ingredients||{};
+  const sum=Object.values(ings).reduce((a,b)=>a+b,0);
+  const id2=document.createElement('div');id2.className='sl';
+  id2.innerHTML=`<span style="font-size:14px">📦</span><span class="qt">${sum}</span><span class="nm">ресурсы</span>`;
+  id2.onclick=()=>openCraft();
+  p.appendChild(id2);
 }
 
-// ============== ORB SYSTEM ==============
-function openOrbScreen() {
-  if (myState.orbs <= 0) { showError('Нет орбов!'); return; }
-  document.getElementById('orb-screen').style.display = 'flex';
-  document.getElementById('orbDisplay').className = 'orb common';
-  document.getElementById('orbInner').textContent = '🔮';
-  document.getElementById('orbResult').style.display = 'none';
-  document.getElementById('orbScreenCount').textContent = myState.orbs;
-  orbOpening = false;
+// ===== ORB =====
+function openOrbModal(){
+  if(my.orbs<=0){shwErr('Нет орбов!');return;}
+  openModal('orbModal');
+  const orb=e('orbEl');orb.className='orb-big c';
+  e('orbIcon').textContent='🔮';
+  e('orbRes').style.display='none';e('orbMCount').textContent=my.orbs;
+  orbOpen=false;
+}
+function openOrb(){
+  if(orbOpen||!socket||!curRoom)return;
+  orbOpen=true;
+  const orb=e('orbEl');
+  const rs=['c','r','e'];const r=rs[Math.floor(Math.random()*rs.length)];
+  orb.className='orb-big '+r+' s';
+  setTimeout(()=>{orb.className='orb-big '+r+' o';
+    setTimeout(()=>{socket.emit('openOrb',{code:curRoom});},600);
+  },400);
+}
+function showOrbRes(pl,rar){
+  e('orbRes').style.display='block';
+  e('orName').textContent=pl.name;e('orName').style.color=RC[rar]||'#4f4';
+  e('orRar').textContent=RN[rar]||rar;e('orRar').style.color=RC[rar]||'#4f4';
+  e('orDesc').textContent=pl.desc||'';
+  orbOpen=false;
 }
 
-function openOrb() {
-  if (orbOpening || !socket || !currentRoom) return;
-  orbOpening = true;
-  const orb = document.getElementById('orbDisplay');
-  const rarities = ['common', 'rare', 'epic'];
-  const r = rarities[Math.floor(Math.random() * rarities.length)];
-  orb.className = 'orb ' + r + ' shake';
-  setTimeout(() => {
-    orb.className = 'orb ' + r + ' open';
-    setTimeout(() => {
-      socket.emit('openOrb', { code: currentRoom });
-    }, 800);
-  }, 500);
-}
-
-function showOrbResult(plant, rarity) {
-  document.getElementById('orbResult').style.display = 'block';
-  document.getElementById('rName').textContent = plant.name;
-  const rarityColors = { common: '#4f4', rare: '#4ff', epic: '#f4f' };
-  const rarityNames = { common: 'Обычный', rare: 'Редкий', epic: 'Эпический' };
-  document.getElementById('rName').style.color = rarityColors[rarity] || '#4f4';
-  document.getElementById('rRarity').textContent = rarityNames[rarity] || rarity;
-  document.getElementById('rRarity').style.color = rarityColors[rarity] || '#4f4';
-  document.getElementById('rDesc').textContent = plant.desc || '';
-  orbOpening = false;
-}
-
-function closeOrbScreen() {
-  document.getElementById('orb-screen').style.display = 'none';
-  updateHUD();
-}
-
-// ============== CRAFTING ==============
-function showCrafting() {
-  if (!inBasement) { showError('Крафтить можно только в подвале'); return; }
-  document.getElementById('crafting-panel').style.display = 'block';
-  const list = document.getElementById('craftList');
-  list.innerHTML = '';
-  const recipes = [
-    { id: 'health_potion', name: '💚 Зелье здоровья', cost: '🍇 x2', desc: '+40 HP' },
-    { id: 'armor_scrap', name: '🛡️ Броня из хлама', cost: '🌿 x2 + 🫧 x1', desc: '+10 защиты' },
-    { id: 'weapon_spike', name: '🗡️ Шипастая дубина', cost: '🌿 x1 + 🫧 x2', desc: '+20 урона' },
+// ===== CRAFT =====
+function openCraft(){
+  if(!inBase){shwErr('Крафт только в подвале');return;}
+  openModal('craftModal');
+  const l=e('craftList');l.innerHTML='';
+  const recs=[
+    {id:'health_potion',name:'💚 Зелье здоровья',cost:'🍇 x2',desc:'+50 HP'},
+    {id:'big_health_potion',name:'💚 Большое зелье',cost:'🍇 x3 + 🌿 x1',desc:'+100 HP'},
+    {id:'armor_scrap',name:'🛡️ Броня из хлама',cost:'🌿 x2 + 🫧 x1',desc:'+15 защиты'},
+    {id:'armor_metal',name:'🛡️ Металл-броня',cost:'🌿 x4 + 🫧 x3',desc:'+30 защиты'},
+    {id:'weapon_spike',name:'🗡️ Шипастая дубина',cost:'🌿 x1 + 🫧 x2',desc:'+25 урона'},
+    {id:'weapon_sword',name:'🗡️ Радиац. меч',cost:'🌿 x3 + 🫧 x4',desc:'+45 урона'},
+    {id:'weapon_bow',name:'🏹 Мутант-лук',cost:'🌿 x2 + 🫧 x2 + 🍇 x1',desc:'+35 урона'},
+    {id:'accessory_ring',name:'💍 Кольцо выжившего',cost:'🍇 x3 + 🌿 x3 + 🫧 x3',desc:'+50 HP'},
+    {id:'orb_potion',name:'🔮 Зелье орба',cost:'🍇 x5 + 🫧 x5',desc:'+1 орб'},
+    {id:'bomb',name:'💣 Радиационная бомба',cost:'🍇 x2 + 🫧 x3',desc:'+60 урона'},
   ];
-  recipes.forEach(r => {
-    const div = document.createElement('div');
-    div.className = 'craft-recipe';
-    div.innerHTML = `<div><div class="craft-name">${r.name}</div><div class="craft-cost">${r.cost} — ${r.desc}</div></div><button class="craft-btn" onclick="craftItem('${r.id}')">СКРАФТИТЬ</button>`;
-    list.appendChild(div);
+  recs.forEach(r=>{
+    const d=document.createElement('div');d.className='cr';
+    d.innerHTML=`<div><div class="cn">${r.name}</div><div class="cc">${r.cost} — ${r.desc}</div></div><button class="cb" onclick="craftIt('${r.id}')">КРАФТ</button>`;
+    l.appendChild(d);
   });
-  updateIngredients();
+  updIng();
+}
+function hideCraft(){closeModal('craftModal');}
+function craftIt(rec){
+  if(socket&&curRoom)socket.emit('craft',{code:curRoom,recipe:rec});
+  setTimeout(updIng,150);
+}
+function updIng(){
+  const i=my.ingredients||{};
+  e('ingDisp').textContent=`🍇 ягоды: ${i.radiation_berry||0} · 🌿 корни: ${i.mutant_root||0} · 🫧 слизь: ${i.slime||0}`;
 }
 
-function hideCrafting() { document.getElementById('crafting-panel').style.display = 'none'; }
-
-function craftItem(recipe) {
-  if (socket && currentRoom) socket.emit('craft', { code: currentRoom, recipe });
-  setTimeout(updateIngredients, 100);
-}
-
-function updateIngredients() {
-  const ings = myState.ingredients || {};
-  document.getElementById('ingredientsDisplay').textContent =
-    `🍇 ягоды: ${ings.radiation_berry || 0}, 🌿 корни: ${ings.mutant_root || 0}, 🫧 слизь: ${ings.slime || 0}`;
-}
-
-// ============== PLANTS ==============
-function showPlants() {
-  document.getElementById('plants-panel').style.display = 'block';
-  const list = document.getElementById('plantsList');
-  list.innerHTML = '';
-  if (!myState.plants || myState.plants.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#888;padding:20px">У тебя пока нет растений. Открывай орбы! 🔮</div>';
-    return;
+// ===== PLANTS =====
+function openPlants(){
+  openModal('plantsModal');
+  const l=e('plantsList');l.innerHTML='';
+  if(!my.plants||!my.plants.length){
+    l.innerHTML='<div style="text-align:center;color:#888;padding:16px;font-size:11px">Нет растений. Открывай орбы! 🔮</div>';return;
   }
-  myState.plants.forEach((p, i) => {
-    const div = document.createElement('div');
-    div.className = 'plant-card';
-    const hpPct = p.maxHp ? (p.hp / p.maxHp * 100) : 100;
-    const rarityColors = { common: '#4f4', rare: '#4ff', epic: '#f4f' };
-    div.innerHTML = `
-      <div class="p-color" style="background:${p.color || '#4f4'};box-shadow:0 0 10px ${rarityColors[p.rarity] || '#4f4'}"></div>
-      <div class="p-info">
-        <div class="p-name">${PLANTS_EMOJI[p.ability] || '🌱'} ${p.name} <span style="color:${rarityColors[p.rarity] || '#4f4'};font-size:10px">${p.rarity === 'common' ? '★' : p.rarity === 'rare' ? '★★' : '★★★'}</span></div>
-        <div class="p-lvl">Ур. ${p.level} · ${p.desc || ''}</div>
-        <div class="p-hp"><div class="p-hp-fill" style="width:${hpPct}%"></div></div>
-      </div>
-    `;
-    list.appendChild(div);
+  my.plants.forEach((pl,i)=>{
+    const d=document.createElement('div');d.className='pc';
+    const hpP=pl.maxHp?Math.round(pl.hp/pl.maxHp*100):100;
+    d.innerHTML=`<div class="pd" style="background:${pl.color||'#4f4'};box-shadow:0 0 8px ${RC[pl.rarity]||'#4f4'}"></div>
+      <div class="pi">
+        <div class="pn">${PE[pl.ability]||'🌱'} ${pl.name} <span style="color:${RC[pl.rarity]||'#4f4'};font-size:9px">${'★'.repeat(pl.rarity==='common'?1:pl.rarity==='rare'?2:3)}</span></div>
+        <div class="pl">Ур.${pl.level} · ${pl.desc||''}</div>
+        <div class="php"><div class="phf" style="width:${hpP}%"></div></div>
+      </div>`;
+    l.appendChild(d);
   });
 }
+function openStats(){
+  openModal('statsModal');
+  const i=my.ingredients||{};
+  e('statsGrid').innerHTML=`
+    <div class="st">Уровень <span class="sv">${my.level}</span></div>
+    <div class="st">Опыт <span class="sv">${my.exp}/${my.level*50}</span></div>
+    <div class="st">❤️ HP <span class="sv">${Math.round(my.hp)}/${my.maxHp}</span></div>
+    <div class="st">🗡️ Атака <span class="sv">${15+(my.equip?.weapon?.dmg||0)}</span></div>
+    <div class="st">🛡️ Защита <span class="sv">${my.equip?.armor?.def||0}</span></div>
+    <div class="st">🔮 Орбы <span class="sv">${my.orbs||0}</span></div>
+    <div class="st">🌱 Растений <span class="sv">${my.plants?.length||0}</span></div>
+    <div class="st">💀 Убийств <span class="sv">${my.kills||0}</span></div>
+    <div class="st">🍇 Ягоды <span class="sv">${i.radiation_berry||0}</span></div>
+    <div class="st">🌿 Корни <span class="sv">${i.mutant_root||0}</span></div>
+    <div class="st">🫧 Слизь <span class="sv">${i.slime||0}</span></div>
+    <div class="st">🏆 Всего ресурсов <span class="sv">${Object.values(i).reduce((a,b)=>a+b,0)}</span></div>
+  `;
+}
+function sendChat(){
+  const inp=e('chat-inp');
+  if(!inp.value.trim())return;
+  if(socket&&curRoom)socket.emit('chat',{code:curRoom,msg:inp.value});
+  inp.value='';
+}
+window.sendChat=sendChat;
 
-function hidePlants() { document.getElementById('plants-panel').style.display = 'none'; }
-
-// ============== WORLD NAVIGATION ==============
-function goToWorld() {
-  if (!worldData) {
-    showError('Мир ещё не загружен');
-    return;
-  }
-  inBasement = false;
-  document.getElementById('worldBtn').style.display = 'none';
-  document.getElementById('basementBtn').style.display = 'inline-block';
-  myState.x = 300;
-  myState.y = 300;
-  if (socket && currentRoom) {
-    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
-  }
+// ===== NAV =====
+function goWorld(){
+  if(!world){shwErr('Мир не загружен');return;}
+  inBase=false;
+  e('goWorldBtn').style.display='none';e('goBaseBtn').style.display='inline-block';
+  if(my.x<100||my.y<100){my.x=200+Math.random()*100;my.y=200+Math.random()*100;}
+}
+function goBase(){
+  inBase=true;
+  e('goWorldBtn').style.display='inline-block';e('goBaseBtn').style.display='none';
+  my.x=400;my.y=300;
+}
+function respawnPlayer(){
+  my.hp=my.maxHp;
+  my.x=400;my.y=300;inBase=true;
+  e('goWorldBtn').style.display='inline-block';e('goBaseBtn').style.display='none';
+  closeModal('deathModal');
+  if(socket&&curRoom){socket.emit('playerMove',{code:curRoom,x:my.x,y:my.y,dir:my.dir,inBasement:true});}
+  hud();
 }
 
-function goToBasement() {
-  inBasement = true;
-  document.getElementById('worldBtn').style.display = 'inline-block';
-  document.getElementById('basementBtn').style.display = 'none';
-  myState.x = 400;
-  myState.y = 300;
-  if (socket && currentRoom) {
-    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
-  }
+// ===== HELPERS =====
+function openModal(id){document.getElementById(id).style.display='flex';}
+function closeModal(id){document.getElementById(id).style.display='none';}
+function closeAllModals(){
+  ['orbModal','craftModal','plantsModal','statsModal','deathModal','lvModal','bossWarn'].forEach(id=>closeModal(id));
+  const inp=e('chat-inp');chatOn=false;inp.style.display='none';
 }
-
-function respawn() {
-  myState.hp = myState.maxHp / 2;
-  myState.x = 400;
-  myState.y = 300;
-  inBasement = true;
-  document.getElementById('worldBtn').style.display = 'inline-block';
-  document.getElementById('basementBtn').style.display = 'none';
-  document.getElementById('death-screen').style.display = 'none';
-  if (socket && currentRoom) {
-    socket.emit('playerMove', { code: currentRoom, x: myState.x, y: myState.y, dir: myState.dir });
-    socket.emit('stateUpdate', { hp: myState.hp });
-  }
-  updateHUD();
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    closeOrbScreen();
-    hideCrafting();
-    hidePlants();
-  }
-});
-
-// Prevent context menu
-canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-console.log('Mutated Survivors loaded!');
+function hud(){rendHUD();}
+// Expose for onclick
+window.createRoom=createRoom;window.joinRoom=joinRoom;window.toggleReady=toggleReady;
+window.openOrbModal=openOrbModal;window.openOrb=openOrb;window.closeAllModals=closeAllModals;
+window.openCraft=openCraft;window.craftIt=craftIt;window.openPlants=openPlants;
+window.openStats=openStats;window.goWorld=goWorld;window.goBase=goBase;
+window.respawnPlayer=respawnPlayer;window.collectNear=collectNear;
 </script>
 </body>
 </html>
